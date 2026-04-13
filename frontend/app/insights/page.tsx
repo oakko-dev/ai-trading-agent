@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Brain, BarChart3 } from "lucide-react";
+import { Sparkles, Brain, BarChart3, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PageInstructions } from "@/components/layout/PageInstructions";
 import { GoldGauge } from "@/components/ui/gold-gauge";
@@ -30,6 +30,8 @@ export default function InsightsPage() {
   const [optimization, setOptimization] = useState<Record<string, unknown> | null>(null);
   const [botRunning, setBotRunning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeError, setOptimizeError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -46,7 +48,18 @@ export default function InsightsPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleRunOptimization = async () => {
-    try { const res = await runOptimization(); setOptimization(res.data); } catch (e) { console.error(e); }
+    setOptimizing(true);
+    setOptimizeError(null);
+    try {
+      const res = await runOptimization();
+      setOptimization(res.data);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Optimization failed";
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setOptimizeError(detail || msg);
+    } finally {
+      setOptimizing(false);
+    }
   };
   const handleApply = async (logId: number) => {
     if (confirm("Apply suggested parameters?")) {
@@ -176,12 +189,12 @@ export default function InsightsPage() {
         <div>
           {optimization && optimization.suggested_params ? (
             <OptimizationReport
-              assessment={(optimization.rationale as string) || ""}
+              assessment={(optimization.assessment as string) || (optimization.rationale as string) || ""}
               currentParams={(optimization.current_params as Record<string, number>) || {}}
               suggestedParams={(optimization.suggested_params as Record<string, number>) || {}}
               confidence={(optimization.confidence as number) || 0}
-              reasoning={(optimization.rationale as string) || ""}
-              logId={(optimization.id as number) || null}
+              reasoning={(optimization.reasoning as string) || (optimization.rationale as string) || ""}
+              logId={(optimization.log_id as number) || (optimization.id as number) || null}
               applied={(optimization.applied as boolean) || false}
               botRunning={botRunning}
               onApply={handleApply}
@@ -190,14 +203,24 @@ export default function InsightsPage() {
             <Card>
               <CardContent className="py-12 text-center space-y-4">
                 <Sparkles className="size-10 text-muted-foreground/40 mx-auto" />
-                <p className="text-sm text-muted-foreground font-medium">No optimization runs yet</p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {optimizing ? "AI is analyzing your recent trades..." : "No optimization runs yet"}
+                </p>
                 <Button
                   onClick={handleRunOptimization}
+                  disabled={optimizing}
                   className="rounded-full bg-primary text-primary-foreground font-semibold hover-scale"
                 >
-                  <Sparkles className="size-4 mr-1.5" />
-                  Run Optimization
+                  {optimizing ? (
+                    <Loader2 className="size-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4 mr-1.5" />
+                  )}
+                  {optimizing ? "Optimizing..." : "Run Optimization"}
                 </Button>
+                {optimizeError && (
+                  <p className="text-xs text-red-400 font-medium">{optimizeError}</p>
+                )}
               </CardContent>
             </Card>
           )}

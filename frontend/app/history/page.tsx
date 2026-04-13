@@ -131,77 +131,81 @@ export default function HistoryPage() {
                   ))}
                 </div>
               ) : trades.length > 0 ? (
-                <ScrollArea className="h-[400px] sm:h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Symbol</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Lot</TableHead>
-                        <TableHead className="text-right">Open</TableHead>
-                        <TableHead className="text-right">Close</TableHead>
-                        <TableHead className="text-right">P&L</TableHead>
-                        <TableHead>Strategy</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead className="text-center">AI</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const total = trades.reduce((s, t) => s + (t.profit ?? 0), 0);
-                        const wins = trades.filter((t) => (t.profit ?? 0) > 0).length;
-                        return trades.length > 0 ? (
-                          <TableRow className="border-t-2 border-border bg-muted/30 font-semibold">
-                            <TableCell colSpan={5} className="text-xs font-bold text-muted-foreground">
-                              Total ({trades.length} trades · {wins}W / {trades.length - wins}L)
-                            </TableCell>
-                            <TableCell
-                              className={`text-right font-mono font-bold ${total >= 0 ? "text-success dark:text-green-400" : "text-destructive"}`}
-                            >
-                              {total >= 0 ? "+" : ""}{total.toFixed(2)}
-                            </TableCell>
-                            <TableCell colSpan={3} />
-                          </TableRow>
-                        ) : null;
-                      })()}
-                      {trades.map((t) => (
-                        <TableRow key={t.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="text-muted-foreground text-xs font-medium">
-                            {new Date(t.open_time).toLocaleDateString("en-GB", { timeZone: "Asia/Bangkok" })}
-                          </TableCell>
-                          <TableCell className="font-medium text-xs">{t.symbol}</TableCell>
-                          <TableCell
-                            className={`font-semibold ${t.type === "BUY" ? "text-success dark:text-green-400" : "text-destructive"}`}
-                          >
-                            {t.type}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">{t.lot}</TableCell>
-                          <TableCell className="text-right font-mono">{t.open_price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-mono">
-                            {t.close_price?.toFixed(2) ?? "—"}
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-mono font-semibold ${(t.profit ?? 0) >= 0 ? "text-success dark:text-green-400" : "text-destructive"}`}
-                          >
-                            {t.profit !== null ? `${t.profit >= 0 ? "+" : ""}${t.profit.toFixed(2)}` : "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground font-medium">{t.strategy_name}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs max-w-[200px] truncate" title={t.trade_reason || undefined}>
-                            {t.trade_reason || "—"}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {t.ai_sentiment_label ? (
-                              <SentimentBadge label={t.ai_sentiment_label} score={t.ai_sentiment_score || 0} size="sm" />
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
+                <>
+                  {/* Detect which optional columns have data */}
+                  {(() => {
+                    const hasReason = trades.some((t) => t.trade_reason);
+                    const hasSentiment = trades.some((t) => t.ai_sentiment_label);
+                    const total = trades.reduce((s, t) => s + (t.profit ?? 0), 0);
+                    const wins = trades.filter((t) => (t.profit ?? 0) > 0).length;
+                    const losses = trades.length - wins;
+
+                    return (
+                      <>
+                        <ScrollArea className="h-[400px] sm:h-[500px]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-xs">Time</TableHead>
+                                <TableHead className="text-xs">Symbol</TableHead>
+                                <TableHead className="text-xs">Type</TableHead>
+                                <TableHead className="text-xs text-right">Lot</TableHead>
+                                <TableHead className="text-xs text-right">Open</TableHead>
+                                <TableHead className="text-xs text-right">Close</TableHead>
+                                <TableHead className="text-xs text-right">P&L</TableHead>
+                                <TableHead className="text-xs">Strategy</TableHead>
+                                {hasReason && <TableHead className="text-xs">Reason</TableHead>}
+                                {hasSentiment && <TableHead className="text-xs text-center">AI</TableHead>}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {trades.map((t) => (
+                                <TableRow key={t.id} className="hover:bg-muted/30 transition-colors">
+                                  <TableCell className="text-muted-foreground text-xs">
+                                    {new Date(t.open_time).toLocaleDateString("en-GB", { timeZone: "Asia/Bangkok" })}
+                                  </TableCell>
+                                  <TableCell className="text-xs font-medium">{t.symbol}</TableCell>
+                                  <TableCell className={`text-xs font-semibold ${t.type === "BUY" ? "text-success dark:text-green-400" : "text-destructive"}`}>
+                                    {t.type}
+                                  </TableCell>
+                                  <TableCell className="text-right text-xs font-mono">{t.lot}</TableCell>
+                                  <TableCell className="text-right text-xs font-mono">{t.open_price.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right text-xs font-mono">{t.close_price?.toFixed(2) ?? "—"}</TableCell>
+                                  <TableCell className={`text-right text-xs font-mono font-semibold ${(t.profit ?? 0) >= 0 ? "text-success dark:text-green-400" : "text-destructive"}`}>
+                                    {t.profit !== null ? `${t.profit >= 0 ? "+" : ""}${t.profit.toFixed(2)}` : "—"}
+                                  </TableCell>
+                                  <TableCell className="text-xs text-muted-foreground">{t.strategy_name}</TableCell>
+                                  {hasReason && (
+                                    <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={t.trade_reason || undefined}>
+                                      {t.trade_reason || "—"}
+                                    </TableCell>
+                                  )}
+                                  {hasSentiment && (
+                                    <TableCell className="text-center">
+                                      {t.ai_sentiment_label ? (
+                                        <SentimentBadge label={t.ai_sentiment_label} score={t.ai_sentiment_score || 0} size="sm" />
+                                      ) : null}
+                                    </TableCell>
+                                  )}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+
+                        {/* Summary bar at bottom */}
+                        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-muted/20 rounded-b-xl">
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {trades.length} trades · {wins}W / {losses}L · Win rate {trades.length > 0 ? ((wins / trades.length) * 100).toFixed(0) : 0}%
+                          </span>
+                          <span className={`text-sm font-bold font-mono ${total >= 0 ? "text-success dark:text-green-400" : "text-destructive"}`}>
+                            {total >= 0 ? "+" : ""}${Math.abs(total).toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </>
               ) : (
                 <p className="text-muted-foreground text-center py-12 font-medium">No trades found</p>
               )}
