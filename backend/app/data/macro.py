@@ -132,24 +132,32 @@ class MacroDataService:
         """Compute rolling correlation between gold price and macro series."""
         from app.db.models import OHLCVData
 
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        # FIX: Calculate in UTC, then strip the timezone info to make it "naive"
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).replace(tzinfo=None)
 
         # Get daily gold closes
         result = await self.db.execute(
             select(OHLCVData)
-            .where(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe, OHLCVData.time >= cutoff)
+            .where(
+                OHLCVData.symbol == symbol, 
+                OHLCVData.timeframe == timeframe, 
+                OHLCVData.time >= cutoff
+            )
             .order_by(OHLCVData.time)
         )
         ohlcv_rows = result.scalars().all()
+        
         if len(ohlcv_rows) < 20:
             return {"error": "Insufficient OHLCV data for correlation"}
 
+        # Use r.time directly as it is now a naive datetime
         gold_df = pd.DataFrame([{"date": r.time.date(), "gold_close": r.close} for r in ohlcv_rows])
         gold_daily = gold_df.groupby("date").last().reset_index()
         gold_daily["date"] = pd.to_datetime(gold_daily["date"])
 
         correlations = {}
         for series_id in FRED_SERIES:
+            # The same 'cutoff' works here for MacroData.date
             result = await self.db.execute(
                 select(MacroData)
                 .where(MacroData.series_id == series_id, MacroData.date >= cutoff)

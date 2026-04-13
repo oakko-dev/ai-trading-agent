@@ -142,7 +142,7 @@ class Settings(BaseSettings):
     telegram_chat_id: str = ""
 
     # FRED API (macro data)
-    fred_api_key: str = ""
+    fred_api_key: str = "17f2eee09cda1249dfb6bba7b14974be"
 
     # ML Model
     ml_model_path: str = "models/xauusd_signal.pkl"
@@ -176,13 +176,17 @@ class Settings(BaseSettings):
     trading_mode: str = "strategy"  # "strategy" (strategy-first, AI filter) | "ai_autonomous" (AI decides)
     rollout_mode: str = "shadow"  # "shadow" | "paper" | "micro" | "live" (Phase F gradual rollout)
 
+    # Kimi (Moonshot) — orchestrator / single-agent decisions (kimi-thinking → kimi-k2-thinking API)
+    moonshot_api_key: str = ""  # also read from MOONSHOT_API_KEY
+    moonshot_api_base: str = "https://api.moonshot.ai/v1"
+
     # Logging
     log_format: str = "text"  # "json" for production, "text" for development
     log_dir: str = "logs"
 
     # Authentication
     auth_username: str = "admin"          # legacy password auth (deprecated)
-    auth_password_hash: str = ""          # bcrypt hash; empty = auth disabled
+    auth_password_hash: str = "$2a$12$O1BAtXFs.PUeEPkFoEytReMX5QAGNU0G6/GCsghc0TZaskRqiZ1o."          # bcrypt hash; empty = auth disabled
     jwt_expire_hours: int = 24
 
     # WebAuthn (Passkey) — new auth system

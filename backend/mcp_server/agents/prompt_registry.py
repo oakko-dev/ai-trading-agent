@@ -69,7 +69,7 @@ def _load_defaults() -> None:
 AGENT_META: dict[str, dict[str, str]] = {
     "orchestrator": {
         "name": "Orchestrator",
-        "model": "claude-sonnet-4-20250514",
+        "model": "kimi-thinking",
         "description": "ผู้ประสานงานหลัก — สังเคราะห์รายงานจาก specialist ทั้งหมดและตัดสินใจเทรด",
     },
     "technical_analyst": {
@@ -94,7 +94,7 @@ AGENT_META: dict[str, dict[str, str]] = {
     },
     "single_agent": {
         "name": "Single Agent",
-        "model": "claude-sonnet-4-20250514",
+        "model": "kimi-thinking",
         "description": "Agent เดี่ยว (fallback) — system_prompt.md สำหรับ single-agent mode",
     },
     "sentiment": {

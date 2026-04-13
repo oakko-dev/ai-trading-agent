@@ -8,7 +8,7 @@ Workflow:
 4. Execute trades if warranted (via broker tools + guardrails)
 5. Log all decisions with reasoning
 
-Model: Sonnet (best reasoning for synthesis and final decisions).
+Model: Kimi kimi-thinking / kimi-k2-thinking (Moonshot API) for synthesis and final decisions.
 """
 
 import asyncio

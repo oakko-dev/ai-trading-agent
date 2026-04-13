@@ -132,6 +132,38 @@ async def _test_telegram() -> dict:
         return {"name": "Telegram", "status": "error", "latency_ms": 0, "detail": str(e)}
 
 
+async def _test_moonshot() -> dict:
+    """Test Moonshot (Kimi) OpenAI-compatible API connectivity."""
+    start = time.time()
+    api_key = (settings.moonshot_api_key or os.environ.get("MOONSHOT_API_KEY", "")).strip()
+    base = (settings.moonshot_api_base or os.environ.get("MOONSHOT_API_BASE", "https://api.moonshot.ai/v1")).rstrip("/")
+    if not api_key:
+        return {
+            "name": "Kimi (Moonshot)",
+            "status": "not_configured",
+            "latency_ms": 0,
+            "detail": "MOONSHOT_API_KEY not set",
+        }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{base}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+        latency = int((time.time() - start) * 1000)
+        if resp.status_code == 200:
+            return {
+                "name": "Kimi (Moonshot)",
+                "status": "connected",
+                "latency_ms": latency,
+                "detail": base,
+            }
+        err = (resp.text or "")[:200] or f"HTTP {resp.status_code}"
+        return {"name": "Kimi (Moonshot)", "status": "error", "latency_ms": latency, "detail": err}
+    except Exception as e:
+        return {"name": "Kimi (Moonshot)", "status": "error", "latency_ms": 0, "detail": str(e)}
+
+
 @router.get("/status")
 async def get_integration_status(request: Request):
     """Test all integrations and return status."""
@@ -140,6 +172,7 @@ async def get_integration_status(request: Request):
         _test_anthropic(),
         _test_mt5(),
         _test_telegram(),
+        _test_moonshot(),
     )
     return {"services": list(results)}
 
@@ -151,6 +184,7 @@ async def test_service(service: str, request: Request):
         "anthropic": _test_anthropic,
         "mt5": _test_mt5,
         "telegram": _test_telegram,
+        "moonshot": _test_moonshot,
     }
     tester = testers.get(service)
     if not tester:
@@ -168,6 +202,7 @@ _CONFIG_VAULT_KEYS: dict[str, dict[str, str]] = {
     "anthropic": {"OAuth Token": "CLAUDE_CODE_OAUTH_TOKEN"},
     "mt5": {"Bridge URL": "MT5_BRIDGE_URL", "API Key": "MT5_BRIDGE_API_KEY"},
     "telegram": {"Bot Token": "TELEGRAM_BOT_TOKEN", "Chat ID": "TELEGRAM_CHAT_ID"},
+    "moonshot": {"API Key": "MOONSHOT_API_KEY", "API Base": "MOONSHOT_API_BASE"},
 }
 
 
@@ -200,6 +235,7 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
     # Read from Vault first, fallback to env
     import os
     claude_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
+    moonshot_key = (settings.moonshot_api_key or os.environ.get("MOONSHOT_API_KEY", "")).strip()
     mt5_url = await _get_config_value(db, "MT5_BRIDGE_URL", settings.mt5_bridge_url)
     mt5_key = await _get_config_value(db, "MT5_BRIDGE_API_KEY", getattr(settings, "mt5_bridge_api_key", ""))
     telegram_token = await _get_config_value(db, "TELEGRAM_BOT_TOKEN", getattr(settings, "telegram_bot_token", ""))
@@ -210,11 +246,10 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
             {
                 "id": "anthropic",
                 "name": "Claude AI (Max Subscription)",
-                "description": "Claude AI for market analysis and autonomous trading decisions",
+                "description": "Claude Haiku for specialist agents (technical, fundamental, risk, reflector)",
                 "status": "configured" if claude_token else "not_configured",
                 "config": {
                     "Auth": "Max Subscription (OAuth)" if claude_token else "Not configured",
-                    "Orchestrator Model": "claude-sonnet-4-20250514",
                     "Specialist Model": "claude-haiku-4-5-20251001",
                 },
                 "tools": [
@@ -236,6 +271,24 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
                     {"name": "detect_regime", "description": "Detect market regime (trending/ranging)"},
                     {"name": "recommend_strategy", "description": "Recommend strategy for current regime"},
                     {"name": "log_decision", "description": "Log trading decision with reasoning"},
+                ],
+            },
+            {
+                "id": "moonshot",
+                "name": "Kimi (Moonshot AI)",
+                "description": "Orchestrator and single-agent trading decisions (OpenAI-compatible API)",
+                "status": "configured" if moonshot_key else "not_configured",
+                "config": {
+                    "API Key": _mask(moonshot_key) if moonshot_key else "Not configured",
+                    "API Base": settings.moonshot_api_base,
+                    "Decision Model": "kimi-thinking (API: kimi-k2-thinking)",
+                },
+                "tools": [
+                    {"name": "place_order", "description": "Place BUY/SELL (guardrail-gated)"},
+                    {"name": "modify_position", "description": "Modify SL/TP of existing position"},
+                    {"name": "close_position", "description": "Close a position by ticket"},
+                    {"name": "log_decision", "description": "Log trading decision with reasoning"},
+                    {"name": "log_reasoning", "description": "Log internal reasoning"},
                 ],
             },
             {

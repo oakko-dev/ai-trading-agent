@@ -14,6 +14,11 @@ from app.db.session import get_db
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
+def safe_round(value, digits=2):
+    """Helper to prevent JSON serialization errors from inf or nan."""
+    if value is None or math.isinf(value) or math.isnan(value):
+        return 0.0
+    return round(float(value), digits)
 
 @router.get("/performance")
 async def get_performance_analytics(
@@ -21,7 +26,9 @@ async def get_performance_analytics(
     days: int = Query(30, ge=1, le=365),
     db: AsyncSession = Depends(get_db),
 ):
+    # Use UTC to stay consistent with your db/cutoff logic
     cutoff = datetime.utcnow() - timedelta(days=days)
+    
     query = select(Trade).where(
         Trade.open_time >= cutoff,
         Trade.profit.isnot(None),
@@ -42,7 +49,8 @@ async def get_performance_analytics(
             "avg_win": 0, "avg_loss": 0, "largest_win": 0, "largest_loss": 0,
             "avg_trade_duration_min": 0, "consecutive_wins": 0, "consecutive_losses": 0,
             "best_hour": None, "worst_hour": None, "best_day": None, "worst_day": None,
-            "equity_curve": [], "daily_returns": [],
+            "equity_curve": [], "daily_returns": [], "avg_slippage": 0, 
+            "max_slippage": 0, "slippage_trades": 0, "total_profit": 0
         }
 
     profits = [t.profit for t in trades]
@@ -52,8 +60,11 @@ async def get_performance_analytics(
     total_profit = sum(profits)
     gross_profit = sum(wins) if wins else 0
     gross_loss = abs(sum(losses)) if losses else 0
+    
     win_rate = len(wins) / len(profits) if profits else 0
-    profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+    
+    # FIX: Avoid float('inf') which crashes JSON serialization
+    profit_factor = gross_profit / gross_loss if gross_loss > 0 else 0.0
 
     # Equity curve + max drawdown
     equity = []
@@ -74,15 +85,16 @@ async def get_performance_analytics(
             if dd_pct > max_dd_pct:
                 max_dd_pct = dd_pct
 
-    # Sharpe Ratio (annualized, assuming daily returns)
+    # Sharpe Ratio
     if len(profits) >= 2:
         mean_return = sum(profits) / len(profits)
-        std_return = math.sqrt(sum((p - mean_return) ** 2 for p in profits) / (len(profits) - 1))
+        variance = sum((p - mean_return) ** 2 for p in profits) / (len(profits) - 1)
+        std_return = math.sqrt(variance)
         sharpe = (mean_return / std_return * math.sqrt(252)) if std_return > 0 else 0
     else:
         sharpe = 0
 
-    # Sortino Ratio (only downside deviation)
+    # Sortino Ratio
     downside = [p for p in profits if p < 0]
     if downside and len(profits) >= 2:
         mean_return = sum(profits) / len(profits)
@@ -91,10 +103,7 @@ async def get_performance_analytics(
     else:
         sortino = 0
 
-    # Calmar Ratio
     calmar = total_profit / max_dd if max_dd > 0 else 0
-
-    # Recovery Factor
     recovery = total_profit / max_dd if max_dd > 0 else 0
 
     # Consecutive wins/losses
@@ -113,16 +122,12 @@ async def get_performance_analytics(
             max_consec_losses = max(max_consec_losses, cur_losses)
 
     # Trade duration
-    durations = []
-    for t in trades:
-        if t.close_time and t.open_time:
-            dur = (t.close_time - t.open_time).total_seconds() / 60
-            durations.append(dur)
+    durations = [((t.close_time - t.open_time).total_seconds() / 60) for t in trades if t.close_time and t.open_time]
     avg_duration = sum(durations) / len(durations) if durations else 0
 
     # Best/worst hour and day
-    hour_pnl: dict[int, float] = {}
-    day_pnl: dict[int, float] = {}
+    hour_pnl = {}
+    day_pnl = {}
     for t in trades:
         h = t.open_time.hour
         d = t.open_time.weekday()
@@ -135,39 +140,34 @@ async def get_performance_analytics(
     best_day = day_names[max(day_pnl, key=day_pnl.get)] if day_pnl else None
     worst_day = day_names[min(day_pnl, key=day_pnl.get)] if day_pnl else None
 
-    # Daily returns for chart
-    daily: dict[str, float] = {}
+    # Daily returns
+    daily = {}
     for t in trades:
         day_key = t.close_time.strftime("%Y-%m-%d")
         daily[day_key] = daily.get(day_key, 0) + t.profit
     daily_returns = [{"date": k, "pnl": round(v, 2)} for k, v in sorted(daily.items())]
 
-    # Slippage analysis
-    slippage_values = []
-    for t in trades:
-        if t.expected_price and t.open_price:
-            slip = abs(t.open_price - t.expected_price)
-            slippage_values.append(slip)
-
+    # Slippage
+    slippage_values = [abs(t.open_price - t.expected_price) for t in trades if t.expected_price and t.open_price]
     avg_slippage = sum(slippage_values) / len(slippage_values) if slippage_values else 0
     max_slippage = max(slippage_values) if slippage_values else 0
 
     return {
         "total_trades": len(trades),
-        "win_rate": round(win_rate, 4),
-        "profit_factor": round(profit_factor, 2),
-        "total_profit": round(total_profit, 2),
-        "sharpe_ratio": round(sharpe, 2),
-        "sortino_ratio": round(sortino, 2),
-        "calmar_ratio": round(calmar, 2),
-        "max_drawdown": round(max_dd, 2),
-        "max_drawdown_pct": round(max_dd_pct * 100, 1),
-        "recovery_factor": round(recovery, 2),
-        "avg_win": round(sum(wins) / len(wins), 2) if wins else 0,
-        "avg_loss": round(sum(losses) / len(losses), 2) if losses else 0,
-        "largest_win": round(max(profits), 2) if profits else 0,
-        "largest_loss": round(min(profits), 2) if profits else 0,
-        "avg_trade_duration_min": round(avg_duration, 1),
+        "win_rate": safe_round(win_rate, 4),
+        "profit_factor": safe_round(profit_factor, 2),
+        "total_profit": safe_round(total_profit, 2),
+        "sharpe_ratio": safe_round(sharpe, 2),
+        "sortino_ratio": safe_round(sortino, 2),
+        "calmar_ratio": safe_round(calmar, 2),
+        "max_drawdown": safe_round(max_dd, 2),
+        "max_drawdown_pct": safe_round(max_dd_pct * 100, 1),
+        "recovery_factor": safe_round(recovery, 2),
+        "avg_win": safe_round(sum(wins) / len(wins), 2) if wins else 0,
+        "avg_loss": safe_round(sum(losses) / len(losses), 2) if losses else 0,
+        "largest_win": safe_round(max(profits), 2) if profits else 0,
+        "largest_loss": safe_round(min(profits), 2) if profits else 0,
+        "avg_trade_duration_min": safe_round(avg_duration, 1),
         "consecutive_wins": max_consec_wins,
         "consecutive_losses": max_consec_losses,
         "best_hour": best_hour,
@@ -176,8 +176,8 @@ async def get_performance_analytics(
         "worst_day": worst_day,
         "equity_curve": equity,
         "daily_returns": daily_returns,
-        "avg_slippage": round(avg_slippage, 4),
-        "max_slippage": round(max_slippage, 4),
+        "avg_slippage": safe_round(avg_slippage, 4),
+        "max_slippage": safe_round(max_slippage, 4),
         "slippage_trades": len(slippage_values),
     }
 

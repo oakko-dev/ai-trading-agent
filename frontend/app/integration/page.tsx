@@ -44,8 +44,23 @@ function MT5Logo() {
   );
 }
 
+function MoonshotLogo() {
+  return (
+    <svg className="size-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 3a9 9 0 109 9c0-4.97-4.03-9-9-9zm0 2a7 7 0 017 7h-7V5z"
+        fill="#8b5cf6"
+        fillRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 const LOGOS: Record<string, () => React.ReactElement> = {
-  anthropic: ClaudeLogo, mt5: MT5Logo, telegram: TelegramLogo,
+  anthropic: ClaudeLogo,
+  mt5: MT5Logo,
+  telegram: TelegramLogo,
+  moonshot: MoonshotLogo,
 };
 
 // ─── Page ───────────────────────────────────────────────────────────────────
@@ -84,7 +99,13 @@ export default function IntegrationPage() {
     try {
       const res = await api.get("/api/integration/status");
       const results: Record<string, TestResult> = {};
-      const keyMap: Record<string, string> = { "Anthropic API": "anthropic", "MT5 Bridge": "mt5", "Telegram": "telegram" };
+      const keyMap: Record<string, string> = {
+        "Anthropic API": "anthropic",
+        "Claude AI (Max)": "anthropic",
+        "MT5 Bridge": "mt5",
+        "Telegram": "telegram",
+        "Kimi (Moonshot)": "moonshot",
+      };
       for (const s of res.data.services) results[keyMap[s.name] || s.name] = s;
       setTestResults(results);
     } catch { /* handled */ } finally { setTesting(null); }

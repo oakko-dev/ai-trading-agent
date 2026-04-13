@@ -46,8 +46,8 @@ class TestModelSelection:
     def test_specialist_uses_haiku(self):
         assert "haiku" in MODEL_SPECIALIST.lower()
 
-    def test_orchestrator_uses_sonnet(self):
-        assert "sonnet" in MODEL_ORCHESTRATOR.lower()
+    def test_orchestrator_uses_kimi(self):
+        assert "kimi" in MODEL_ORCHESTRATOR.lower()
 
 
 class TestBaseAgentLoop:
@@ -63,7 +63,7 @@ class TestBaseAgentLoop:
         }
 
         with patch("mcp_server.agents.base.sdk_agent_loop", AsyncMock(return_value=mock_result)):
-            result = await run_agent_loop(system_prompt="test", user_message="Analyze")
+            result = await run_agent_loop(system_prompt="test", user_message="Analyze", model=MODEL_SPECIALIST)
 
         assert "HOLD recommended" in result["response"]
         assert result["turns"] == 1
@@ -81,9 +81,27 @@ class TestBaseAgentLoop:
         }
 
         with patch("mcp_server.agents.base.sdk_agent_loop", AsyncMock(return_value=mock_result)):
-            result = await run_agent_loop(system_prompt="test", user_message="test")
+            result = await run_agent_loop(system_prompt="test", user_message="test", model=MODEL_SPECIALIST)
 
         assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_kimi_model_uses_kimi_loop(self):
+        from mcp_server.agents.base import MODEL_ORCHESTRATOR, run_agent_loop
+
+        mock_result = {
+            "response": "HOLD",
+            "tool_calls": [],
+            "turns": 1,
+            "duration_s": 1.0,
+        }
+        with patch("mcp_server.agents.base.kimi_agent_loop", AsyncMock(return_value=mock_result)):
+            result = await run_agent_loop(
+                system_prompt="sys",
+                user_message="go",
+                model=MODEL_ORCHESTRATOR,
+            )
+        assert result["response"] == "HOLD"
 
 
 class TestOrchestratorSynthesis:
