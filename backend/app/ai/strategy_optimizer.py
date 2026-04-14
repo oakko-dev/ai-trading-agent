@@ -4,7 +4,7 @@ Strategy Optimizer — weekly AI-powered parameter optimization with backtest va
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 from loguru import logger
 from sqlalchemy import select
@@ -63,6 +63,7 @@ class StrategyOptimizer:
 
     async def build_performance_summary(self, days: int = 7) -> str:
         cutoff = datetime.now(UTC) - timedelta(days=days)
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).replace(tzinfo=None)
         result = await self.db.execute(
             select(Trade).where(Trade.open_time >= cutoff).order_by(Trade.open_time)
         )

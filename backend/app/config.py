@@ -245,7 +245,7 @@ class Settings(BaseSettings):
     webauthn_origin: str = "http://localhost:3000"  # frontend origin for WebAuthn verification
 
     # Secrets Vault
-    vault_master_key: str = ""  # AES-256 master key for encrypting secrets; empty = vault disabled
+    vault_master_key: str = "d1ff880b771790ce6967f5e4ca6659c202bb98badabf674ddf4e4eeb8255891f"  # AES-256 master key for encrypting secrets; empty = vault disabled
 
     # API
     secret_key: str = ""
