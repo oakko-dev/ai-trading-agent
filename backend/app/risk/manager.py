@@ -25,6 +25,31 @@ from app.constants import (
 
 
 @dataclass
+class VolatilityEstimate:
+    """Abstraction for volatility source — allows swapping ATR for GARCH etc.
+
+    Attributes:
+        value: volatility value (e.g., ATR% = 0.5, GARCH conditional vol = 0.003)
+        source: origin of the estimate ("atr", "garch", "ewma")
+    """
+
+    value: float
+    source: str = "atr"
+
+    @property
+    def as_atr_pct(self) -> float:
+        """Return value normalized to ATR% scale for threshold comparisons."""
+        if self.source == "atr":
+            return self.value
+        if self.source == "garch":
+            # GARCH conditional std → approximate ATR%: multiply by sqrt(period) * 100
+            # 1-step daily vol 0.01 ≈ 1% ATR
+            return self.value * 100
+        # Default: assume already in ATR% scale
+        return self.value
+
+
+@dataclass
 class SLTPResult:
     sl: float
     tp: float
@@ -58,11 +83,14 @@ class RiskManager:
         self.current_regime = "normal"
         self.regime_lot_multiplier = 1.0
 
-    def set_regime(self, regime: str) -> None:
-        """Update current regime and apply corresponding lot multiplier."""
+    def set_regime(self, regime) -> None:
+        """Update current regime and apply corresponding lot multiplier.
+
+        Accepts str or RegimeResult (backward compatible).
+        """
         old = self.current_regime
-        self.current_regime = regime
-        self.regime_lot_multiplier = REGIME_LOT_MULTIPLIERS.get(regime, 1.0)
+        self.current_regime = str(regime)
+        self.regime_lot_multiplier = REGIME_LOT_MULTIPLIERS.get(str(regime), 1.0)
         if old != regime:
             logger.info(f"Regime changed: {old} → {regime} (lot mult: {self.regime_lot_multiplier})")
 

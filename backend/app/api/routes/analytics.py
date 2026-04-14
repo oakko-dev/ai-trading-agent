@@ -27,6 +27,10 @@ async def get_performance_analytics(
     db: AsyncSession = Depends(get_db),
 ):
     # Use UTC to stay consistent with your db/cutoff logic
+    if symbol:
+        from app.config import resolve_broker_symbol
+        symbol = resolve_broker_symbol(symbol)
+
     cutoff = datetime.utcnow() - timedelta(days=days)
     
     query = select(Trade).where(
@@ -189,6 +193,10 @@ async def get_slippage_analysis(
     db: AsyncSession = Depends(get_db),
 ):
     """Detailed slippage analysis: by hour, by strategy, total cost."""
+    if symbol:
+        from app.config import resolve_broker_symbol
+        symbol = resolve_broker_symbol(symbol)
+
     cutoff = datetime.utcnow() - timedelta(days=days)
     query = select(Trade).where(
         Trade.open_time >= cutoff,

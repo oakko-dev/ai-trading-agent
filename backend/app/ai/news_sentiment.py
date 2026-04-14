@@ -4,7 +4,7 @@ News Sentiment Analyzer — analyzes news headlines with Kimi (Moonshot), caches
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import redis.asyncio as redis
 from loguru import logger
@@ -13,7 +13,6 @@ from app.ai.client import AIClient
 from app.ai.prompts import get_enhanced_sentiment_prompt, get_sentiment_prompt
 from app.db.models import NewsSentiment
 from app.db.session import async_session
-
 
 SENTIMENT_CACHE_TTL = 900  # 15 minutes
 
@@ -45,7 +44,7 @@ class NewsSentimentAnalyzer:
         self.redis = redis_client
 
     async def analyze(self, news_items: list[dict], context: dict | None = None, symbol: str = "GOLD") -> SentimentResult:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
 
         if not news_items:
             return SentimentResult(analyzed_at=now)
@@ -128,8 +127,8 @@ class NewsSentimentAnalyzer:
                     try:
                         analyzed_at = datetime.fromisoformat(result.analyzed_at.replace("Z", "+00:00"))
                         if analyzed_at.tzinfo is None:
-                            analyzed_at = analyzed_at.replace(tzinfo=timezone.utc)
-                        age_minutes = (datetime.now(timezone.utc) - analyzed_at).total_seconds() / 60
+                            analyzed_at = analyzed_at.replace(tzinfo=UTC)
+                        age_minutes = (datetime.now(UTC) - analyzed_at).total_seconds() / 60
                         # 10% confidence decay per hour, floor at 50%
                         decay = max(1.0 - (age_minutes / 60) * 0.1, 0.5)
                         result.confidence *= decay
@@ -137,7 +136,7 @@ class NewsSentimentAnalyzer:
 
                         # Too old — treat as neutral
                         if result.confidence < 0.3:
-                            return SentimentResult(analyzed_at=datetime.now(timezone.utc).isoformat())
+                            return SentimentResult(analyzed_at=datetime.now(UTC).isoformat())
                     except (ValueError, TypeError):
                         pass
 
@@ -146,4 +145,4 @@ class NewsSentimentAnalyzer:
             logger.error(f"Redis cache read failed: {e}")
 
         # No cache — return neutral (caller should trigger analyze if needed)
-        return SentimentResult(analyzed_at=datetime.now(timezone.utc).isoformat())
+        return SentimentResult(analyzed_at=datetime.now(UTC).isoformat())

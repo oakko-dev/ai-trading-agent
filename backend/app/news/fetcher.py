@@ -85,8 +85,10 @@ class NewsFetcher:
         return self._dedup_and_limit(all_items)
 
     async def fetch_for_symbol(self, symbol: str) -> list[dict]:
+        from app.config import get_canonical_symbol
         from app.news.sources import NEWS_SOURCES_BY_SYMBOL
-        sources = NEWS_SOURCES_BY_SYMBOL.get(symbol, NEWS_SOURCES_BY_SYMBOL.get("GOLD", []))
+        canonical = get_canonical_symbol(symbol)
+        sources = NEWS_SOURCES_BY_SYMBOL.get(canonical, NEWS_SOURCES_BY_SYMBOL.get(symbol, NEWS_SOURCES_BY_SYMBOL.get("GOLD", [])))
         tasks = []
         for source in sources:
             if source["type"] == "rss":

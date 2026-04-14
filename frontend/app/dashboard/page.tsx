@@ -33,6 +33,7 @@ import {
   getBotEvents,
   getSymbols,
   getAnalytics,
+  resetPeakBalance,
 } from "@/lib/api";
 import { useWebSocket } from "@/lib/websocket";
 import { useBotStore } from "@/store/botStore";
@@ -358,18 +359,33 @@ export default function DashboardPage() {
           value={status?.state || "UNKNOWN"}
           variant={isRunning ? "success" : "warning"}
         />
-        <StatCard
-          icon={ShieldAlert}
-          label="Drawdown"
-          value={account?.drawdown_pct != null ? `${(account.drawdown_pct * 100).toFixed(1)}%` : "—"}
-          subtitle={account?.peak_balance ? `Peak: $${account.peak_balance.toFixed(0)}` : undefined}
-          variant={
-            !account?.drawdown_pct ? "default"
-            : account.drawdown_pct < 0.05 ? "success"
-            : account.drawdown_pct < 0.10 ? "warning"
-            : "danger"
-          }
-        />
+        <div
+          className="cursor-pointer"
+          title="Click to reset peak balance"
+          onClick={async () => {
+            if (confirm("Reset peak balance to current balance?")) {
+              try {
+                await resetPeakBalance();
+                window.location.reload();
+              } catch (e) {
+                console.error("Reset peak failed:", e);
+              }
+            }
+          }}
+        >
+          <StatCard
+            icon={ShieldAlert}
+            label="Drawdown"
+            value={account?.drawdown_pct != null ? `${(account.drawdown_pct * 100).toFixed(1)}%` : "—"}
+            subtitle={account?.peak_balance ? `Peak: $${account.peak_balance.toFixed(0)} (click reset)` : undefined}
+            variant={
+              !account?.drawdown_pct ? "default"
+              : account.drawdown_pct < 0.05 ? "success"
+              : account.drawdown_pct < 0.10 ? "warning"
+              : "danger"
+            }
+          />
+        </div>
       </div>
 
       {/* Controls + Price Chart */}

@@ -34,11 +34,19 @@ def get_manager():
 
 
 def _get_engine(symbol: str | None = None):
-    """Get a specific engine or the first one as default."""
+    """Get a specific engine or the first one as default.
+
+    Resolves symbol aliases (e.g., GOLD → GOLDmicro if that's what's configured).
+    """
     mgr = get_manager()
     if symbol:
         engine = mgr.get_engine(symbol)
         if not engine:
+            # Try reverse alias: frontend sends "GOLD" but engine is "GOLDmicro"
+            from app.config import SYMBOL_ALIASES
+            for alias, canonical in SYMBOL_ALIASES.items():
+                if canonical == symbol and alias in mgr.engines:
+                    return mgr.engines[alias]
             raise HTTPException(status_code=404, detail=f"Symbol {symbol} not configured")
         return engine
     # Default: first engine (backward compat)
@@ -217,6 +225,18 @@ async def update_settings(data: SettingsUpdate):
                 fixed_lot=resolved_fixed_lot,
             )
     return {"status": "updated"}
+
+
+@router.post("/reset-peak", dependencies=[Depends(require_auth)])
+async def reset_peak_balance():
+    """Reset peak balance to current balance (fixes drawdown after account switch)."""
+    engine = _get_engine()
+    account = await engine.connector.get_account()
+    if not account.get("success"):
+        raise HTTPException(status_code=503, detail="Cannot get account info")
+    balance = account["data"]["balance"]
+    await engine.redis.set("circuit:peak_balance", str(balance))
+    return {"peak_balance": balance, "message": f"Peak reset to ${balance:.2f}"}
 
 
 @router.get("/events")

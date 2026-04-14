@@ -35,6 +35,7 @@ from app.api.routes import (
     secrets,
     strategy,
 )
+from app.api.routes import quant
 from app.api.routes import metrics as metrics_routes
 from app.api.routes import webhooks
 from app.api.websocket import router as ws_router
@@ -291,6 +292,7 @@ app.include_router(webhooks.router)
 app.include_router(activity.router)
 app.include_router(agent_prompts.router)
 app.include_router(memory_routes.router)
+app.include_router(quant.router)
 app.include_router(ws_router)
 app.include_router(ws_runners_router)
 

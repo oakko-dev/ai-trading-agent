@@ -2,7 +2,7 @@
 AI Context Builder — enriches AI prompts with historical patterns, price action, and trade history.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def _naive(dt: datetime) -> datetime:
@@ -11,11 +11,11 @@ def _naive(dt: datetime) -> datetime:
 
 import pandas as pd
 from loguru import logger
-from sqlalchemy import select, func, extract
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import OHLCVData, Trade
-from app.strategy.indicators import ema, rsi, atr
+from app.strategy.indicators import atr, ema, rsi
 
 
 class AIContextBuilder:
@@ -59,7 +59,7 @@ class AIContextBuilder:
 
     async def build_price_action_stats(self, symbol: str, timeframe: str) -> str:
         """30-day price action summary: trend, ATR percentile, range."""
-        cutoff = _naive(datetime.now(timezone.utc)) - timedelta(days=30)
+        cutoff = _naive(datetime.now(UTC)) - timedelta(days=30)
         result = await self.db.execute(
             select(OHLCVData)
             .where(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe, OHLCVData.time >= cutoff)
@@ -109,7 +109,7 @@ class AIContextBuilder:
 
     async def build_trade_history_patterns(self, days: int = 30) -> str:
         """Win rate by hour/day from Trade table."""
-        cutoff = _naive(datetime.now(timezone.utc)) - timedelta(days=days)
+        cutoff = _naive(datetime.now(UTC)) - timedelta(days=days)
         result = await self.db.execute(
             select(Trade).where(Trade.open_time >= cutoff, Trade.profit.isnot(None))
         )
@@ -190,7 +190,7 @@ class AIContextBuilder:
     async def build_historical_patterns(self, symbol: str, timeframe: str) -> str:
         """Patterns around known recurring events (NFP, session times)."""
         # Get 90 days of data
-        cutoff = _naive(datetime.now(timezone.utc)) - timedelta(days=90)
+        cutoff = _naive(datetime.now(UTC)) - timedelta(days=90)
         result = await self.db.execute(
             select(OHLCVData)
             .where(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe, OHLCVData.time >= cutoff)

@@ -212,6 +212,19 @@ export const getRolloutMode = () => api.get("/api/rollout/mode");
 export const setRolloutMode = (mode: string) => api.put("/api/rollout/mode", { mode });
 export const getRolloutReadiness = () => api.get("/api/rollout/readiness");
 
+// Quant
+export const getQuantVaR = () => api.get("/api/quant/var");
+export const getQuantRegime = () => api.get("/api/quant/regime");
+export const getQuantCorrelation = () => api.get("/api/quant/correlation");
+export const getQuantVolatility = () => api.get("/api/quant/volatility");
+export const getQuantPortfolio = () => api.get("/api/quant/portfolio");
+export const getQuantSignals = () => api.get("/api/quant/signals");
+export const runStressTest = (scenario: string = "all") =>
+  api.post("/api/quant/stress-test", null, { params: { scenario }, timeout: 60000 });
+
+// Bot management
+export const resetPeakBalance = () => api.post("/api/bot/reset-peak");
+
 // Health
 export const getHealth = () => api.get("/health");
 

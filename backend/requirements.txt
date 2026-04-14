@@ -22,3 +22,7 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 webauthn==2.7.1
 psutil==6.1.1
+arch>=7.0
+hmmlearn>=0.3
+filterpy>=1.4
+cvxpy>=1.4

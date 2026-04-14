@@ -22,6 +22,7 @@ import {
   Plug,
   LogOut,
   Activity,
+  Shield,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ const navGroups: NavGroup[] = [
       { href: "/activity", label: "AI Activity", icon: Activity },
       { href: "/ml", label: "ML Model", icon: Cpu },
       { href: "/macro", label: "Macro Data", icon: Globe },
+      { href: "/quant", label: "Quant", icon: Shield },
     ],
   },
   {

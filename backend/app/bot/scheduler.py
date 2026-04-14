@@ -9,8 +9,36 @@ from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
 
-from app.bot.engine import BotEngine
+from app.bot.engine import BotEngine, BotState
 from app.config import settings
+
+# Market close windows (UTC). None = 24/7 (e.g. crypto).
+# daily_close: (start_hour, end_hour) when MT5 daily maintenance occurs.
+MARKET_SCHEDULE = {
+    "GOLD":    {"weekend": True, "daily_close": (22, 23)},
+    "OILCash": {"weekend": True, "daily_close": (22, 23)},
+    "BTCUSD":  {"weekend": False, "daily_close": None},
+    "USDJPY":  {"weekend": True, "daily_close": (22, 22)},
+}
+
+
+def is_market_open(symbol: str) -> bool:
+    """Check if the market for *symbol* is likely open on MT5."""
+    from app.config import get_canonical_symbol
+    now = datetime.utcnow()
+    canonical = get_canonical_symbol(symbol)
+    schedule = MARKET_SCHEDULE.get(canonical, MARKET_SCHEDULE.get(symbol, {"weekend": True, "daily_close": None}))
+
+    # Weekend check (Saturday 00:00 – Sunday 23:59 UTC, approximate)
+    if schedule["weekend"] and now.weekday() >= 5:
+        return False
+
+    # Daily close window
+    dc = schedule.get("daily_close")
+    if dc and dc[0] <= now.hour < dc[1]:
+        return False
+
+    return True
 
 # Timeframe → cron schedule mapping
 TIMEFRAME_CRON = {
@@ -284,22 +312,25 @@ class BotScheduler:
             await self._run_ai_agent(symbols)
 
     async def _sentiment_job(self):
-        """Fetch news sentiment regardless of bot state — news comes out 24/7.
+        """Fetch news sentiment only for symbols whose market is open and bot is running.
 
-        Runs every 15 min on weekdays, but skips 3 out of 4 runs on weekends
-        (effectively hourly) to save API cost.
+        Skips when market is closed (weekends for forex/metals, daily maintenance window)
+        to reduce unnecessary API calls (~50% reduction).
         """
-        now = datetime.utcnow()
-        is_weekend = now.weekday() >= 5  # Saturday=5, Sunday=6
-        if is_weekend and now.minute not in (2,):
-            # On weekends, only run at :02 past each hour (skip :17, :32, :47)
-            logger.debug("Sentiment job skipped (weekend, hourly mode)")
-            return
+        tasks = []
+        for sym, engine in self._engines.items():
+            if engine.state != BotState.RUNNING:
+                continue
+            if not is_market_open(sym):
+                logger.debug(f"Sentiment skipped [{sym}]: market closed")
+                continue
+            tasks.append(engine.fetch_and_analyze_sentiment())
 
-        logger.debug("Sentiment job triggered")
-        tasks = [e.fetch_and_analyze_sentiment() for e in self._engines.values()]
         if tasks:
+            logger.debug(f"Sentiment job triggered for {len(tasks)} symbol(s)")
             await asyncio.gather(*tasks, return_exceptions=True)
+        else:
+            logger.debug("Sentiment job skipped: no active symbols with open market")
 
     async def _run_ai_agent(self, symbols: list[str]):
         """Run AI agent for each symbol — the primary trading decision-maker."""
