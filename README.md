@@ -1,6 +1,6 @@
 # AI Trading Agent
 
-Multi-symbol autonomous trading platform powered by Claude AI agents.
+Multi-symbol autonomous trading platform powered by Kimi (Moonshot AI) agents.
 Trades GOLD (XAUUSD), OILCash, BTCUSD, USDJPY via MetaTrader 5.
 
 ## Architecture
@@ -20,11 +20,11 @@ Backend (FastAPI, Railway)
     |       |-- MCP Tool Server (36 tools)
     |       |-- Guardrails (non-bypassable limits)
     |       '-- Multi-Agent Pipeline
-    |           |-- Reflector (Haiku) -- past trade review
-    |           |-- Technical Analyst (Haiku) -- indicators
-    |           |-- Fundamental Analyst (Haiku) -- sentiment
-    |           |-- Risk Analyst (Haiku) -- portfolio risk
-    |           '-- Orchestrator (Sonnet) -- final decision
+    |           |-- Reflector (Kimi) -- past trade review
+    |           |-- Technical Analyst (Kimi) -- indicators
+    |           |-- Fundamental Analyst (Kimi) -- sentiment
+    |           |-- Risk Analyst (Kimi) -- portfolio risk
+    |           '-- Orchestrator (Kimi) -- final decision
     |-- Strategy Engine (5 strategies + ensemble)
     |-- ML Models (LightGBM per-symbol)
     |-- PostgreSQL + Redis
@@ -38,7 +38,7 @@ Backend (FastAPI, Railway)
 |-------|------|
 | Backend | FastAPI 0.115, SQLAlchemy 2.0 (async), asyncpg, Redis, APScheduler |
 | Frontend | Next.js 16, React 19, Tailwind 4, Zustand, recharts |
-| AI Agent | Anthropic SDK (Claude Sonnet + Haiku), MCP tools, guardrails |
+| AI Agent | Kimi (Moonshot OpenAI-compatible API), MCP tools, guardrails |
 | ML | LightGBM, scikit-learn, pandas |
 | Auth | WebAuthn (Passkey) + JWT httpOnly cookie |
 | Trading | MetaTrader 5 via HTTP Bridge |
@@ -47,7 +47,7 @@ Backend (FastAPI, Railway)
 
 ## Features
 
-- **AI Agent Trading**: Claude-powered multi-agent system that analyzes markets and executes trades autonomously
+- **AI Agent Trading**: Kimi-powered multi-agent system that analyzes markets and executes trades autonomously
 - **Passkey Auth**: Passwordless login via WebAuthn (fingerprint/Face ID/YubiKey)
 - **Secrets Vault**: AES-256-GCM encrypted storage for API keys and tokens
 - **Runner Management**: Docker sandbox runners with live logs, metrics, and job queue
@@ -114,7 +114,7 @@ Key variables for production:
 - `SECRET_KEY` — JWT signing key
 - `VAULT_MASTER_KEY` — Secrets vault encryption key
 - `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` — Passkey config
-- `CLAUDE_OAUTH_TOKEN` — Claude Max subscription token (stored in Vault)
+- `MOONSHOT_API_KEY` — Kimi API key (often stored in Vault)
 - `ROLLOUT_MODE` — `shadow` / `paper` / `micro` / `live`
 - `AGENT_MODE` — `single` (Phase C) or `multi` (Phase D multi-agent)
 
@@ -128,7 +128,7 @@ backend/
     strategy/        # 5 strategies + ensemble + regime detection
     risk/            # Risk manager, circuit breaker, correlation
     ml/              # LightGBM trainer, features, drift detection
-    ai/              # Claude AI client, sentiment, optimization
+    ai/              # Kimi AI client, sentiment, optimization
     runner/          # Docker sandbox runner system
     middleware/      # Auth middleware
     db/              # SQLAlchemy models, migrations

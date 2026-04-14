@@ -74,22 +74,22 @@ AGENT_META: dict[str, dict[str, str]] = {
     },
     "technical_analyst": {
         "name": "Technical Analyst",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "kimi-thinking",
         "description": "วิเคราะห์กราฟ — EMA, RSI, ATR, Bollinger, แนวโน้ม, โมเมนตัม",
     },
     "fundamental_analyst": {
         "name": "Fundamental Analyst",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "kimi-thinking",
         "description": "วิเคราะห์ข่าว — sentiment, ประวัติเทรด, ปัจจัยพื้นฐาน",
     },
     "risk_analyst": {
         "name": "Risk Analyst",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "kimi-thinking",
         "description": "วิเคราะห์ความเสี่ยง — position sizing, SL/TP, correlation, exposure",
     },
     "reflector": {
         "name": "Reflector",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "kimi-thinking",
         "description": "ทบทวนผลเทรด — เรียนรู้จากอดีต, ตรวจจับ regime, แนะนำกลยุทธ์",
     },
     "single_agent": {
@@ -99,12 +99,12 @@ AGENT_META: dict[str, dict[str, str]] = {
     },
     "sentiment": {
         "name": "Sentiment Analyzer",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "kimi-thinking",
         "description": "วิเคราะห์ข่าว sentiment — bullish/bearish/neutral พร้อมปัจจัยสำคัญ",
     },
     "optimization": {
         "name": "Strategy Optimizer",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "kimi-thinking",
         "description": "แนะนำการปรับ parameter — วิเคราะห์ผลเทรดแล้วเสนอค่าที่ดีกว่า",
     },
 }

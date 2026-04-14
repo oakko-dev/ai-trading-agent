@@ -107,7 +107,7 @@ async def lifespan(app: FastAPI):
         engine.context_builder.set_macro_service(macro_service)
         engine.context_builder.set_event_calendar(event_calendar)
 
-    # Initialize optimizer (uses Claude Agent SDK via AIClient)
+    # Initialize optimizer (uses Kimi via AIClient)
     optimizer = StrategyOptimizer(ai_client, db_session)
     optimizer.set_collector(hist_collector)
     for engine in manager.engines.values():

@@ -9,7 +9,7 @@ async def get_latest_sentiment() -> dict:
     """Get the latest AI sentiment analysis.
 
     Queries the backend API for the most recent sentiment data rather than
-    making a separate Anthropic API call. This avoids duplicate token usage
+    making a separate LLM API call. This avoids duplicate token usage
     and leverages the backend's caching/scheduling of sentiment analysis.
 
     Returns:

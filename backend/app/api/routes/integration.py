@@ -1,8 +1,6 @@
 """Integration Status API — test connectivity, config management via Vault."""
 
 import os
-import shutil
-import subprocess
 import time
 
 import httpx
@@ -66,16 +64,6 @@ async def _get_config_value(db: AsyncSession, vault_key: str, env_fallback: str)
     """Get config: Vault first, then env var fallback."""
     val = await _get_vault_value(db, vault_key)
     return val if val else env_fallback
-
-
-async def _test_anthropic() -> dict:
-    """Test Claude AI connectivity via Agent SDK (Max subscription)."""
-    import os
-    start = time.time()
-    token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
-    if token:
-        return {"name": "Claude AI (Max)", "status": "connected", "latency_ms": 0, "detail": "OAuth token configured"}
-    return {"name": "Claude AI (Max)", "status": "error", "latency_ms": 0, "detail": "CLAUDE_CODE_OAUTH_TOKEN not set"}
 
 
 async def _test_mt5() -> dict:
@@ -169,7 +157,6 @@ async def get_integration_status(request: Request):
     """Test all integrations and return status."""
     import asyncio
     results = await asyncio.gather(
-        _test_anthropic(),
         _test_mt5(),
         _test_telegram(),
         _test_moonshot(),
@@ -181,7 +168,6 @@ async def get_integration_status(request: Request):
 async def test_service(service: str, request: Request):
     """Test a single service."""
     testers = {
-        "anthropic": _test_anthropic,
         "mt5": _test_mt5,
         "telegram": _test_telegram,
         "moonshot": _test_moonshot,
@@ -199,7 +185,6 @@ class SaveConfigRequest(BaseModel):
 
 # Mapping: integration config field → Vault key
 _CONFIG_VAULT_KEYS: dict[str, dict[str, str]] = {
-    "anthropic": {"OAuth Token": "CLAUDE_CODE_OAUTH_TOKEN"},
     "mt5": {"Bridge URL": "MT5_BRIDGE_URL", "API Key": "MT5_BRIDGE_API_KEY"},
     "telegram": {"Bot Token": "TELEGRAM_BOT_TOKEN", "Chat ID": "TELEGRAM_CHAT_ID"},
     "moonshot": {"API Key": "MOONSHOT_API_KEY", "API Base": "MOONSHOT_API_BASE"},
@@ -234,7 +219,6 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
     """Get all integration configs (masked, Vault-first then env fallback)."""
     # Read from Vault first, fallback to env
     import os
-    claude_token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
     moonshot_key = (settings.moonshot_api_key or os.environ.get("MOONSHOT_API_KEY", "")).strip()
     mt5_url = await _get_config_value(db, "MT5_BRIDGE_URL", settings.mt5_bridge_url)
     mt5_key = await _get_config_value(db, "MT5_BRIDGE_API_KEY", getattr(settings, "mt5_bridge_api_key", ""))
@@ -244,13 +228,14 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
     return {
         "integrations": [
             {
-                "id": "anthropic",
-                "name": "Claude AI (Max Subscription)",
-                "description": "Claude Haiku for specialist agents (technical, fundamental, risk, reflector)",
-                "status": "configured" if claude_token else "not_configured",
+                "id": "moonshot",
+                "name": "Kimi (Moonshot AI)",
+                "description": "All AI agents — specialists, orchestrator, single-agent, sentiment, optimization (OpenAI-compatible API)",
+                "status": "configured" if moonshot_key else "not_configured",
                 "config": {
-                    "Auth": "Max Subscription (OAuth)" if claude_token else "Not configured",
-                    "Specialist Model": "claude-haiku-4-5-20251001",
+                    "API Key": _mask(moonshot_key) if moonshot_key else "Not configured",
+                    "API Base": settings.moonshot_api_base,
+                    "Model": "kimi-thinking (API: kimi-k2-thinking)",
                 },
                 "tools": [
                     {"name": "run_full_analysis", "description": "Comprehensive technical analysis (EMA, RSI, ATR, ADX, Bollinger)"},
@@ -270,20 +255,6 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
                     {"name": "get_performance", "description": "Get performance statistics"},
                     {"name": "detect_regime", "description": "Detect market regime (trending/ranging)"},
                     {"name": "recommend_strategy", "description": "Recommend strategy for current regime"},
-                    {"name": "log_decision", "description": "Log trading decision with reasoning"},
-                ],
-            },
-            {
-                "id": "moonshot",
-                "name": "Kimi (Moonshot AI)",
-                "description": "Orchestrator and single-agent trading decisions (OpenAI-compatible API)",
-                "status": "configured" if moonshot_key else "not_configured",
-                "config": {
-                    "API Key": _mask(moonshot_key) if moonshot_key else "Not configured",
-                    "API Base": settings.moonshot_api_base,
-                    "Decision Model": "kimi-thinking (API: kimi-k2-thinking)",
-                },
-                "tools": [
                     {"name": "place_order", "description": "Place BUY/SELL (guardrail-gated)"},
                     {"name": "modify_position", "description": "Modify SL/TP of existing position"},
                     {"name": "close_position", "description": "Close a position by ticket"},
@@ -350,95 +321,55 @@ async def get_integration_config(db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.get("/diag/claude-cli")
-async def diagnose_claude_cli():
-    """Diagnose Claude CLI availability and auth — helps debug SDK agent failures."""
+@router.get("/diag/kimi")
+async def diagnose_kimi():
+    """Diagnose Moonshot (Kimi) API key and minimal chat completion."""
     result: dict = {"checks": []}
+    api_key = (settings.moonshot_api_key or os.environ.get("MOONSHOT_API_KEY", "")).strip()
+    base = (settings.moonshot_api_base or os.environ.get("MOONSHOT_API_BASE", "https://api.moonshot.ai/v1")).rstrip("/")
 
-    # 1. Check claude binary
-    claude_path = shutil.which("claude")
     result["checks"].append({
-        "name": "claude_binary",
-        "ok": claude_path is not None,
-        "detail": claude_path or "NOT FOUND in PATH",
+        "name": "moonshot_api_key",
+        "ok": bool(api_key),
+        "detail": f"set ({len(api_key)} chars)" if api_key else "MOONSHOT_API_KEY not set",
     })
 
-    # 2. Check node
-    node_path = shutil.which("node")
-    result["checks"].append({
-        "name": "node_binary",
-        "ok": node_path is not None,
-        "detail": node_path or "NOT FOUND",
-    })
+    if not api_key:
+        result["all_ok"] = False
+        return result
 
-    # 3. Check token env
-    token = os.environ.get("CLAUDE_CODE_OAUTH_TOKEN", "")
-    has_space = " " in token
-    result["checks"].append({
-        "name": "oauth_token",
-        "ok": bool(token) and not has_space,
-        "detail": f"set ({len(token)} chars, has_space={has_space})" if token else "NOT SET",
-    })
-
-    # 4. Check current user (must NOT be root)
-    uid = os.getuid()
-    result["checks"].append({
-        "name": "non_root_user",
-        "ok": uid != 0,
-        "detail": f"uid={uid} user={os.environ.get('USER', 'unknown')}",
-    })
-
-    # 5. Try running claude --version
-    if claude_path:
-        try:
-            proc = subprocess.run(
-                [claude_path, "--version"],
-                capture_output=True, text=True, timeout=10,
-            )
-            result["checks"].append({
-                "name": "claude_version",
-                "ok": proc.returncode == 0,
-                "detail": (proc.stdout.strip() or proc.stderr.strip())[:200],
-            })
-        except Exception as e:
-            result["checks"].append({
-                "name": "claude_version",
-                "ok": False,
-                "detail": str(e)[:200],
-            })
-
-    # 6. Try a minimal SDK query
     try:
-        from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage
-        from claude_agent_sdk.types import TextBlock
-
-        stderr_out: list[str] = []
-        text_out: list[str] = []
-        async for msg in query(
-            prompt="Reply with exactly: OK",
-            options=ClaudeAgentOptions(
-                max_turns=1,
-                model="claude-haiku-4-5-20251001",
-                permission_mode="bypassPermissions",
-                stderr=lambda line: stderr_out.append(line),
-            ),
-        ):
-            if isinstance(msg, AssistantMessage):
-                for block in msg.content:
-                    if isinstance(block, TextBlock):
-                        text_out.append(block.text)
-
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{base}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
         result["checks"].append({
-            "name": "sdk_query",
-            "ok": bool(text_out),
-            "detail": "".join(text_out)[:200] or "empty response",
+            "name": "moonshot_models",
+            "ok": resp.status_code == 200,
+            "detail": base if resp.status_code == 200 else (resp.text or "")[:200],
         })
     except Exception as e:
         result["checks"].append({
-            "name": "sdk_query",
+            "name": "moonshot_models",
+            "ok": False,
+            "detail": str(e)[:200],
+        })
+
+    try:
+        from mcp_server.kimi_client import kimi_complete
+
+        text = await kimi_complete("Reply with exactly: OK", "You are a test harness.", max_tokens=32)
+        result["checks"].append({
+            "name": "kimi_complete",
+            "ok": bool(text and text.strip()),
+            "detail": (text or "")[:200] or "empty response",
+        })
+    except Exception as e:
+        result["checks"].append({
+            "name": "kimi_complete",
             "ok": False,
             "detail": str(e)[:300],
-            "stderr": "".join(stderr_out[-5:])[:500] if stderr_out else "empty",
         })
 
     result["all_ok"] = all(c["ok"] for c in result["checks"])

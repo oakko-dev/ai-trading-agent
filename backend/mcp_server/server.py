@@ -1,5 +1,5 @@
 """
-MCP Tool Server — registers all trading tools for the Claude Agent.
+MCP Tool Server — registers all trading tools for the Kimi agent.
 
 Uses FastMCP (mcp Python SDK) with stdio transport.
 Designed to run inside the agent container/process.

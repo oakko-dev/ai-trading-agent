@@ -2,7 +2,7 @@
 Fundamental Analyst agent — analyzes sentiment, news, and historical patterns.
 
 Uses: sentiment + history tools only (read-only, no execution).
-Model: Haiku (fast, cost-efficient for analysis tasks).
+Model: Kimi (Moonshot API).
 """
 
 from mcp_server.agents.base import run_agent_loop, MODEL_SPECIALIST

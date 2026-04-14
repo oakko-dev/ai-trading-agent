@@ -170,7 +170,7 @@ class BotScheduler:
             coalesce=True,
         )
 
-        # Vault: OAuth token health check every 5 minutes
+        # Vault: Moonshot API key health check every 5 minutes
         self.scheduler.add_job(
             self._vault_health_job,
             "interval",
@@ -490,7 +490,7 @@ class BotScheduler:
             logger.warning(f"Memory consolidation failed: {e}")
 
     async def _vault_health_job(self):
-        """Check OAuth token health via vault."""
+        """Check Moonshot API key health via vault."""
         try:
             from app.db.session import async_session
             from app.vault_health import check_oauth_health

@@ -1,7 +1,7 @@
 """
 Agent configuration — entry points for AI trading agent.
 
-Tools are served via MCP server (server.py), dispatched by Claude Agent SDK.
+Tools are served via MCP server (server.py), executed locally for Kimi tool calling.
 """
 
 import json

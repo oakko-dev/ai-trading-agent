@@ -11,7 +11,6 @@ WORKDIR /app
 # Install Python dependencies
 COPY backend/requirements.txt /app/requirements-backend.txt
 RUN pip install --no-cache-dir \
-    anthropic>=0.94.0 \
     mcp>=1.0.0 \
     httpx \
     pandas \
@@ -42,7 +41,7 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:8090/health || exit 1
 
 # Secrets injected at runtime via Runner Manager (not baked into image)
-# CLAUDE_OAUTH_TOKEN → injected from Vault
+# MOONSHOT_API_KEY → injected from Vault
 # MT5_BRIDGE_URL → injected from Vault
 # REDIS_URL → injected from Vault
 

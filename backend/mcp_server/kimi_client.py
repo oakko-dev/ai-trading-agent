@@ -28,6 +28,54 @@ def normalize_kimi_model(model: str) -> str:
     return m
 
 
+async def kimi_complete(
+    user_prompt: str,
+    system_prompt: str,
+    model: str = "kimi-thinking",
+    max_tokens: int = 256,
+    timeout: int = 60,
+) -> str | None:
+    """Simple prompt → text via Moonshot chat completions (no tools)."""
+    api_key = (settings.moonshot_api_key or os.environ.get("MOONSHOT_API_KEY", "")).strip()
+    base = (settings.moonshot_api_base or os.environ.get("MOONSHOT_API_BASE", "https://api.moonshot.ai/v1")).rstrip(
+        "/"
+    )
+    model_id = normalize_kimi_model(model)
+    if not api_key:
+        logger.warning("kimi_complete: MOONSHOT_API_KEY not set")
+        return None
+    url = f"{base}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload: dict[str, Any] = {
+        "model": model_id,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "max_tokens": max_tokens,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+        if resp.status_code >= 400:
+            logger.error(f"kimi_complete HTTP {resp.status_code}: {(resp.text or '')[:300]}")
+            return None
+        data = resp.json()
+        choice = (data.get("choices") or [{}])[0]
+        msg = choice.get("message") or {}
+        content = msg.get("content")
+        if isinstance(content, str) and content.strip():
+            logger.info(f"kimi_complete: {len(content)} chars")
+            return content
+        return None
+    except Exception as e:
+        logger.error(f"kimi_complete error: {e}")
+        return None
+
+
 def _filter_tools(allowed: list[str] | None) -> list[dict[str, Any]]:
     """Orchestrator passes a subset; single-agent uses the full MCP tool surface."""
     if allowed is None:

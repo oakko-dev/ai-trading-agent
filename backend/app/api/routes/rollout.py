@@ -151,12 +151,12 @@ async def check_readiness(request: Request):
         "detail": "Set" if secret_key and secret_key != "change-me-in-production" else "Using default — CHANGE THIS",
     })
 
-    # 6. OAuth token (for agent)
-    oauth = os.environ.get("CLAUDE_OAUTH_TOKEN", "")
+    # 6. Moonshot API key (Kimi agent)
+    moonshot = (settings.moonshot_api_key or os.environ.get("MOONSHOT_API_KEY", "")).strip()
     checks.append({
-        "name": "claude_oauth_token",
-        "status": "ok" if oauth else "warn",
-        "detail": "Set (in Vault or env)" if oauth else "Not set — agent will use stub executor",
+        "name": "moonshot_api_key",
+        "status": "ok" if moonshot else "warn",
+        "detail": "Set (in Vault or env)" if moonshot else "Not set — AI calls will fail until MOONSHOT_API_KEY is configured",
     })
 
     # 7. Rollout mode

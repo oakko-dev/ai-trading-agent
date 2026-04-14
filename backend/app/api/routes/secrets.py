@@ -280,26 +280,22 @@ async def _get_secret_or_404(db: AsyncSession, key: str) -> Secret:
 # ─── Connectivity Testers ────────────────────────────────────────────────────
 
 
-async def _test_anthropic(token: str) -> dict:
-    """Test Claude AI via Agent SDK (Max subscription)."""
+async def _test_moonshot(token: str) -> dict:
+    """Test Moonshot (Kimi) API key via GET /v1/models."""
     try:
-        from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage
-        from claude_agent_sdk.types import TextBlock
-        text = ""
-        async for msg in query(
-            prompt="Say OK",
-            options=ClaudeAgentOptions(max_turns=1, model="claude-haiku-4-5-20251001"),
-        ):
-            if isinstance(msg, AssistantMessage):
-                for block in msg.content:
-                    if isinstance(block, TextBlock):
-                        text = block.text
-        if text:
-            return {"ok": True, "message": "Claude (Max subscription) connected via Agent SDK"}
+        from app.config import settings as _settings
+
+        base = (_settings.moonshot_api_base or "https://api.moonshot.ai/v1").rstrip("/")
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                f"{base}/models",
+                headers={"Authorization": f"Bearer {token.strip()}"},
+            )
+        if resp.status_code == 200:
+            return {"ok": True, "message": "Kimi (Moonshot) API key valid"}
+        return {"ok": False, "message": f"Moonshot API error: HTTP {resp.status_code}"}
     except Exception as e:
-        if "rate_limit" in str(e).lower():
-            return {"ok": True, "message": "Claude (Max subscription) connected (rate limited)"}
-        return {"ok": False, "message": f"Agent SDK error: {e}"}
+        return {"ok": False, "message": f"Moonshot API error: {e}"}
 
 
 async def _test_telegram(token: str) -> dict:
@@ -326,7 +322,7 @@ async def _test_fred(api_key: str) -> dict:
 
 
 _SECRET_TESTERS = {
-    "auth": _test_anthropic,
+    "auth": _test_moonshot,
     "notification": _test_telegram,
     "macro": _test_fred,
 }

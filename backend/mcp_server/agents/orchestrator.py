@@ -75,7 +75,6 @@ ORCHESTRATOR_TOOL_NAMES = [
 async def run_multi_agent(
     job_type: str,
     job_input: dict | None,
-    oauth_token: str | None = None,
 ) -> dict:
     """Run the full multi-agent pipeline for a job.
 
@@ -86,7 +85,6 @@ async def run_multi_agent(
     Args:
         job_type: Job type (candle_analysis, manual_analysis, etc.)
         job_input: Job parameters
-        oauth_token: OAuth token
 
     Returns:
         Combined result with all agent reports and final decision.
@@ -118,7 +116,7 @@ async def run_multi_agent(
 
     # ─── Phase 1: Run specialists in parallel ────────────────────────────
 
-    # Run all specialists in parallel (Anthropic API supports concurrent calls)
+    # Run all specialists in parallel
     specialist_tasks = {
         "technical": asyncio.create_task(technical_analyst.analyze(symbol, timeframe)),
         "fundamental": asyncio.create_task(fundamental_analyst.analyze(symbol, timeframe)),
@@ -158,7 +156,6 @@ async def run_multi_agent(
         model=MODEL_ORCHESTRATOR,
         max_turns=10,
         timeout=120,
-        oauth_token=oauth_token,
     )
 
     total_duration = round(time.time() - start_time, 1)

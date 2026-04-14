@@ -5,7 +5,7 @@ Runs before the main analysis pipeline (Phase 0 of orchestrator).
 Provides context and lessons to the orchestrator to improve decisions.
 
 Uses: learning + session + strategy_gen tools.
-Model: Haiku (fast review, cost-efficient).
+Model: Kimi (Moonshot API).
 """
 
 from mcp_server.agents.base import run_agent_loop, MODEL_SPECIALIST

@@ -21,8 +21,6 @@ interface AgentPrompt {
 }
 
 const MODEL_BADGE: Record<string, { label: string; className: string }> = {
-  "claude-sonnet-4-20250514": { label: "Sonnet", className: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
-  "claude-haiku-4-5-20251001": { label: "Haiku", className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
   "kimi-thinking": { label: "Kimi", className: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
   "kimi-k2-thinking": { label: "Kimi", className: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
 };

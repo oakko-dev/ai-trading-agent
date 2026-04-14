@@ -1,5 +1,5 @@
 """
-News Sentiment Analyzer — analyzes news headlines with Claude Haiku, caches in Redis.
+News Sentiment Analyzer — analyzes news headlines with Kimi (Moonshot), caches in Redis.
 """
 
 import json

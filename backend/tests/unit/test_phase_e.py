@@ -315,7 +315,6 @@ class TestOrchestratorWithReflection:
             result = await run_multi_agent(
                 job_type="candle_analysis",
                 job_input={"symbol": "GOLD"},
-                oauth_token="test",
             )
 
         assert "reflector" in result["specialists"]

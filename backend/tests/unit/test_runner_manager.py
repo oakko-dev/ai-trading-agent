@@ -155,7 +155,7 @@ class TestStart:
     async def test_start_injects_decrypted_secrets(self, manager, mock_backend, mock_vault, db_session):
         # Add a secret to DB
         secret = Secret(
-            key="CLAUDE_TOKEN",
+            key="MOONSHOT_API_KEY",
             encrypted_value=b"encrypted",
             nonce=b"nonce123",
             category="auth",
@@ -170,7 +170,7 @@ class TestStart:
         # backend.start should receive decrypted secrets
         call_args = mock_backend.start.call_args
         secrets = call_args.args[2] if len(call_args.args) > 2 else call_args.kwargs.get("secrets", {})
-        assert "CLAUDE_TOKEN" in secrets
+        assert "MOONSHOT_API_KEY" in secrets
 
 
 class TestStop:

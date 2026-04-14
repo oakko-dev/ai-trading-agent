@@ -1,4 +1,4 @@
-# AI Trading Agent — Claude Code Guide
+# AI Trading Agent — Developer Guide
 
 ## Project Overview
 
@@ -11,9 +11,9 @@ Multi-symbol automated trading bot: FastAPI backend (Railway) + Next.js frontend
 ```
 Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
                                           → PostgreSQL + Redis (Docker)
-                                          → Claude AI (sentiment + optimization)
+                                          → Kimi AI (Moonshot — sentiment + optimization + agents)
                                           → LightGBM ML models (per-symbol)
-                                          → MCP Agent (Claude Code SDK)
+                                          → MCP Agent (Kimi tool calling + local dispatch)
                                           → Telegram notifications
 ```
 
@@ -31,13 +31,13 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
   - `news/` — news fetcher + sources
   - `notifications/` — Telegram alerts
   - `memory/` — session memory service + consolidator
-  - `ai/` — Claude AI client (SDK first, Anthropic API fallback), context builder, prompts, strategy optimizer
+  - `ai/` — Kimi AI client (Moonshot API), context builder, prompts, strategy optimizer
   - `api/routes/` — 83 REST endpoints across 20 route files
   - `auth.py` — legacy JWT password auth (active)
   - `auth_webauthn.py` — Passkey (WebAuthn) auth (code exists, disabled)
   - `middleware/auth.py` — global JWT cookie auth middleware (backward compat)
   - `vault.py` — VaultService (AES-256-GCM encryption, HKDF key derivation)
-  - `vault_health.py` — OAuth token health checker (scheduler job)
+  - `vault_health.py` — Moonshot API key health checker (scheduler job)
   - `runner/` — Docker Sandbox Runner system
     - `backend.py` — RunnerBackend ABC + ProcessRunnerBackend
     - `manager.py` — RunnerManager (lifecycle, secrets injection, observability)
@@ -58,12 +58,12 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
   - `metrics.py` — Redis-backed timing/counters
   - `cache.py` — Redis response cache helper
   - `logging_config.py` — structured JSON logging
-- `backend/mcp_server/` — MCP Agent system (Claude Code SDK)
+- `backend/mcp_server/` — MCP Agent system (Kimi + local tool dispatch)
   - `agents/` — orchestrator, technical/fundamental/risk analysts, reflector, prompt_registry
   - `tools/` — 12 tool modules (broker, market_data, indicators, risk, portfolio, sentiment, history, journal, learning, session, strategy_gen, memory)
   - `guardrails.py` — non-bypassable trading limits at broker tool level
-  - `sdk_client.py` — Claude Code SDK client
-  - `server.py` — MCP server entry
+  - `kimi_client.py` + `kimi_tool_dispatch.py` — Moonshot chat completions + tools
+  - `server.py` — MCP server entry (stdio for optional tooling)
   - `agent_config.py` — agent entry point
 - `frontend/` — Next.js App Router (12 pages)
   - `app/dashboard/` — main trading dashboard
@@ -96,7 +96,7 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
 | Backend | FastAPI 0.115, SQLAlchemy 2.0 (async), asyncpg, Redis, APScheduler |
 | Frontend | Next.js 16, React 19, Tailwind 4, Zustand, lightweight-charts, recharts |
 | ML | LightGBM, scikit-learn, pandas |
-| AI | Claude Code SDK (Max subscription) + Anthropic SDK fallback |
+| AI | Kimi (Moonshot OpenAI-compatible API, `MOONSHOT_API_KEY`) |
 | Auth | JWT Bearer token (username/password) — WebAuthn code exists but disabled |
 | CI/CD | GitHub Actions (ruff, pytest, tsc, build), Railway auto-deploy |
 | DB | PostgreSQL 15, Redis 7 (AOF persistence), 14 Alembic migrations |
@@ -114,7 +114,7 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
 ### Phase A — Secrets Vault (code complete, pending deploy)
 - VaultService: AES-256-GCM + HKDF key derivation from `VAULT_MASTER_KEY`
 - Secrets API: CRUD + masked read + test connectivity + history
-- OAuth health monitor: scheduler job every 5 min
+- Moonshot API key health monitor: scheduler job every 5 min
 - Frontend: `/secrets` page (removed from sidebar, accessible via integration page)
 
 ### Phase B — Docker Sandbox Runner (backend + frontend done)
@@ -124,14 +124,14 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
 - Runner API (13 endpoints) + Job API (5 endpoints) + WebSocket live logs
 - Agent entrypoint: asyncio job loop, Redis BRPOP, health check on :8090
 
-### Phase C — Claude Agent Core (code complete)
-- Claude Code SDK: `claude-code-sdk` (Max subscription, no API key needed)
+### Phase C — Kimi Agent Core (code complete)
+- Moonshot API: `kimi-thinking` → `kimi-k2-thinking` (requires `MOONSHOT_API_KEY`)
 - MCP Tools (12 modules): broker, market_data, indicators, risk, portfolio, sentiment, history, journal, learning, session, strategy_gen, memory
 - Guardrails: non-bypassable limits at broker tool level
-- `backend/app/ai/client.py`: `complete_async()` tries SDK first, falls back to Anthropic API
+- `backend/app/ai/client.py`: `complete_async()` uses `kimi_complete` (Moonshot)
 
 ### Phase D — Multi-Agent Architecture (code complete)
-- Orchestrator (Sonnet) + Technical/Fundamental/Risk Analysts (Haiku) + Reflector (Haiku)
+- Orchestrator (Kimi) + Technical/Fundamental/Risk Analysts (Kimi) + Reflector (Kimi)
 - Only orchestrator has execution tools — specialists are read-only
 - Activated via `AGENT_MODE=multi` env var (default: `single`)
 - Prompt registry: customizable per-agent system prompts via `/agent-prompts` page
@@ -145,7 +145,7 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
 ### Phase F — Production Hardening (code complete)
 - Rollout modes: `shadow` → `paper` → `micro` → `live`
 - Broker enforcement: shadow/paper intercepted, micro caps at 0.01 lot
-- Deploy readiness checks: DB, Redis, Vault, WebAuthn, OAuth, rollout mode
+- Deploy readiness checks: DB, Redis, Vault, WebAuthn, Moonshot API key, rollout mode
 - Frontend: rollout mode banner + readiness panel on `/runners` page
 
 ## Development Commands
@@ -175,7 +175,7 @@ railway vars set -s backend "KEY=value"  # set env var
 - **DB session**: Shared session can get dirty — always `rollback()` before new operations in long-lived services
 - **SYMBOL_PROFILES**: Per-symbol config in config.py (timeframe, pip_value, SL/TP mults, ML defaults)
 - **Constants**: All magic numbers in `constants.py` — never hardcode
-- **Tests**: 403 tests across 25 files. SQLite in-memory for DB, fakeredis, mock MT5 connector. Auth disabled via `os.environ["AUTH_PASSWORD_HASH"] = ""` in conftest.py. SDK mocks use `type` attribute instead of `isinstance`.
+- **Tests**: 403 tests across 25 files. SQLite in-memory for DB, fakeredis, mock MT5 connector. Auth disabled via `os.environ["AUTH_PASSWORD_HASH"] = ""` in conftest.py.
 - **Runner**: `RunnerManager` init in `main.py` lifespan. Uses `ProcessRunnerBackend` by default (Railway-compatible). Heartbeat monitor runs as APScheduler job. Job queue uses dual Redis+DB storage. Runner logs streamed via Redis pub/sub to WebSocket.
 - **Coverage**: CI threshold 25% (overall ~29%, critical paths ~89%)
 - **Telegram**: Notifications for trade signals, AI analysis, system alerts. Thai language alerts.
@@ -186,7 +186,7 @@ railway vars set -s backend "KEY=value"  # set env var
 - Health monitor stays in degraded state when MT5 Bridge is offline (by design)
 - Shared db_session can cause `InFailedSQLTransactionError` — mitigated with rollback() calls
 - DB datetime columns: must use `datetime.utcnow()` (naive), NOT `datetime.now(timezone.utc)` (offset-aware) — asyncpg rejects offset-aware for `TIMESTAMP WITHOUT TIME ZONE`
-- Claude Code SDK: `rate_limit_event` parse error on heavy usage — handled gracefully in `base.py`
+- Moonshot API: rate limits and transient errors — see `kimi_client.py` logging
 - WebAuthn passkey auth: disabled due to cross-origin cookie issues on Railway (`.up.railway.app` is public suffix)
 - Deploy: Railway uses Dockerfile CMD, NOT Procfile — always edit `backend/Dockerfile` line 33 for startup changes
 - Deploy: Alembic migration can hang on table lock during zero-downtime deploy (old instance holds locks) — mitigated with `timeout 30` in CMD + `lock_timeout = 5s` in alembic/env.py and lifespan

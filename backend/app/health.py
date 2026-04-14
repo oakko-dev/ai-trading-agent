@@ -26,7 +26,7 @@ async def check_health(bot_engine, connector, redis_client, ai_client) -> dict:
     except Exception:
         pass
 
-    # AI (always available via Claude Agent SDK + Max subscription)
+    # AI (availability depends on MOONSHOT_API_KEY; health does not call the API)
     ai_ok = True
 
     return {

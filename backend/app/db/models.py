@@ -287,7 +287,7 @@ class JobStatus(str, enum.Enum):
 
 
 class Runner(Base):
-    """Docker sandbox runner — executes Claude AI Agent tasks."""
+    """Docker sandbox runner — executes Kimi AI agent tasks."""
     __tablename__ = "runners"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

@@ -1,11 +1,10 @@
 #!/bin/bash
 # Run AI Agent Runner locally on Mac
-# Connects to Railway Redis + MT5 Bridge, uses Claude Code SDK (Max subscription)
+# Connects to Railway Redis + MT5 Bridge; uses Kimi (Moonshot) API (MOONSHOT_API_KEY)
 #
 # Prerequisites:
 #   1. Enable public networking for Redis + Postgres in Railway dashboard
-#   2. Update backend/.env.local with public URLs
-#   3. Claude CLI installed and authenticated (claude login)
+#   2. Update backend/.env.local with public URLs and MOONSHOT_API_KEY
 #
 # Usage: ./scripts/run_agent.sh
 
@@ -18,12 +17,6 @@ BACKEND_DIR="$PROJECT_DIR/backend"
 echo "=== AI Trading Agent — Agent Runner ==="
 echo "Starting agent runner on local Mac..."
 echo ""
-
-# Check claude CLI
-if ! command -v claude &> /dev/null; then
-    echo "ERROR: 'claude' CLI not found. Install it first: npm install -g @anthropic-ai/claude-code"
-    exit 1
-fi
 
 # Check .env.local
 if [ ! -f "$BACKEND_DIR/.env.local" ]; then
@@ -42,6 +35,11 @@ fi
 set -a
 source "$BACKEND_DIR/.env.local"
 set +a
+
+if [ -z "${MOONSHOT_API_KEY:-}" ]; then
+    echo "ERROR: MOONSHOT_API_KEY not set in backend/.env.local"
+    exit 1
+fi
 
 # Set Python path
 export PYTHONPATH="$BACKEND_DIR:$PROJECT_DIR:$PYTHONPATH"

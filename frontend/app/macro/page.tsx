@@ -56,6 +56,7 @@ export default function MacroPage() {
 
   const snapEntries = Object.entries(snapshot);
   const corrEntries = Object.entries(correlations);
+  console.log(corrEntries);
 
   return (
     <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
@@ -130,7 +131,8 @@ export default function MacroPage() {
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs rounded-full">{data.data_points} pts</Badge>
                           <span className={`text-sm font-mono font-bold ${isNeg ? "text-destructive" : "text-success dark:text-green-400"}`}>
-                            {corr > 0 ? "+" : ""}{corr.toFixed(3)}
+                            {typeof corr === "number" && !isNaN(corr) && corr !== null ? (corr > 0 ? "+" : "") + corr.toFixed(3) : "-"}
+                       
                           </span>
                         </div>
                       </div>

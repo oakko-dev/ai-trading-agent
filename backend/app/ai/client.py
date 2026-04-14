@@ -1,5 +1,5 @@
 """
-AI Client — wrapper for Claude Agent SDK (Max subscription).
+AI Client — Kimi (Moonshot) chat completions for sentiment and optimization helpers.
 AI is an optional layer — all calls return None on failure.
 """
 
@@ -8,16 +8,17 @@ import re
 
 from loguru import logger
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "kimi-thinking"
 
 
 class AIClient:
-    """AI client using Claude Agent SDK. No API key needed — uses Max subscription."""
+    """AI client using Moonshot OpenAI-compatible API (MOONSHOT_API_KEY)."""
 
     async def complete_async(self, system_prompt: str, user_prompt: str, max_tokens: int = 256) -> str | None:
         try:
-            from mcp_server.sdk_client import sdk_complete
-            return await sdk_complete(user_prompt, system_prompt, model=MODEL)
+            from mcp_server.kimi_client import kimi_complete
+
+            return await kimi_complete(user_prompt, system_prompt, model=MODEL, max_tokens=max_tokens)
         except Exception as e:
             logger.error(f"AI call failed: {e}")
             return None

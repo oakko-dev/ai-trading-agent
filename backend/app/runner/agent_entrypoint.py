@@ -5,7 +5,7 @@ Reads jobs from Redis, executes them, and reports results.
 Outputs structured JSON logs to stdout (captured by ProcessRunnerBackend._capture_logs).
 
 Phase B: stub executor (logs job info, returns placeholder result).
-Phase C: will be replaced with Claude Agent SDK + MCP tools.
+Phase C: Kimi (Moonshot) agent + MCP tools (local tool dispatch).
 
 Usage: python -m app.runner.agent_entrypoint
 Env vars injected by ProcessRunnerBackend:
@@ -72,9 +72,8 @@ async def execute_job(
 ) -> dict:
     """Execute an agent job.
 
-    If the Claude Code SDK (mcp_server) is available, runs the agentic loop
-    using Claude Max subscription. Otherwise falls back to stub executor.
-    No API key needed — SDK uses CLI auth automatically.
+    If mcp_server agent is available, runs the Kimi agent loop (MOONSHOT_API_KEY).
+    Otherwise falls back to stub executor.
     """
     _log("info", f"[Agent] Executing job {job_id}: type={job_type}", {
         "job_id": job_id,
@@ -103,20 +102,20 @@ async def execute_job(
                 _log("error", f"[Agent] Multi-agent error: {e}, falling back to single agent")
 
         # Single-agent mode (default)
-        _log("info", "[Agent] Running single-agent Claude loop")
+        _log("info", "[Agent] Running single-agent Kimi loop")
         try:
             result = await run_agent(
                 job_type=job_type,
                 job_input=job_input,
             )
-            _log("info", f"[Agent] Job {job_id} completed via Claude agent", {
+            _log("info", f"[Agent] Job {job_id} completed via Kimi agent", {
                 "turns": result.get("turns"),
                 "duration_s": result.get("duration_s"),
                 "tool_calls_count": len(result.get("tool_calls", [])),
             })
             return result
         except Exception as e:
-            _log("error", f"[Agent] Claude agent error: {e}, falling back to stub")
+            _log("error", f"[Agent] Kimi agent error: {e}, falling back to stub")
             return {
                 "status": "error",
                 "error": str(e),
