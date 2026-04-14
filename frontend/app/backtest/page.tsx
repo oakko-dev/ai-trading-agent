@@ -261,7 +261,7 @@ export default function BacktestPage() {
   const configForm = (
     <div className="rounded-xl border border-border bg-card p-4 space-y-4">
       {/* Row 1: Strategy + Symbol + Timeframe */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground font-medium">Strategy</label>
           <Select value={strategy} onValueChange={(v) => v && handleStrategyChange(v)}>
@@ -294,7 +294,7 @@ export default function BacktestPage() {
       </div>
 
       {/* Row 2: Source + Date/Bars + Balance */}
-      <div className="grid grid-cols-3 gap-3 items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
         <div className="space-y-1">
           <label className="text-[11px] text-muted-foreground font-medium">Data Source</label>
           <Select value={source} onValueChange={(v) => v && setSource(v)}>
@@ -334,7 +334,7 @@ export default function BacktestPage() {
   );
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
       <PageHeader title="Backtester" subtitle="Test strategies against historical data" />
 
       <PageInstructions
@@ -347,7 +347,7 @@ export default function BacktestPage() {
       />
 
       <Tabs defaultValue="backtest" className="space-y-5">
-        <TabsList className="grid w-full grid-cols-5 max-w-2xl">
+        <TabsList className="flex w-full overflow-x-auto max-w-2xl">
           <TabsTrigger value="backtest"><FlaskConical className="size-3.5 mr-1.5" />Backtest</TabsTrigger>
           <TabsTrigger value="optimize"><Zap className="size-3.5 mr-1.5" />Optimizer</TabsTrigger>
           <TabsTrigger value="walk-forward"><Footprints className="size-3.5 mr-1.5" />Walk Forward</TabsTrigger>

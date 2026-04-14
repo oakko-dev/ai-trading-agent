@@ -155,7 +155,7 @@ export default function AgentPromptsPage() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-6 space-y-6">
+      <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
         <Skeleton className="h-8 w-48" />
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -167,7 +167,7 @@ export default function AgentPromptsPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
       <PageHeader
         title="Agent Prompts"
         subtitle="View and customize system prompts for AI trading agents"

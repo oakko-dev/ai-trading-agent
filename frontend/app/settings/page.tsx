@@ -192,7 +192,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Mode selector */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {MODE_ORDER.map((mode) => {
               const config = MODE_CONFIG[mode];
               const isActive = mode === rolloutMode;
@@ -315,7 +315,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 sm:gap-x-6 gap-y-3 text-xs">
                 {/* Lot Mode */}
                 <div className="space-y-1">
                   <label className="text-muted-foreground font-medium">Lot Mode</label>

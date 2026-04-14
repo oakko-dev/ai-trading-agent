@@ -132,7 +132,7 @@ export default function IntegrationPage() {
   const hasEdits = Object.values(editValues).some((v) => v.trim());
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
       <PageHeader title="Integration" subtitle="Connect external services to enable agent capabilities">
         <button type="button" onClick={testAll} disabled={testing === "all"}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
@@ -160,7 +160,7 @@ export default function IntegrationPage() {
             const LogoComp = LOGOS[intg.id];
             return (
               <button key={intg.id} type="button" onClick={() => openModal(intg.id)}
-                className="rounded-xl border border-border bg-card p-5 text-left hover:border-primary/40 transition-all group">
+                className="rounded-xl border border-border bg-card p-4 text-left hover:border-primary/40 transition-all group">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-muted/50 flex items-center justify-center group-hover:bg-muted transition-colors">
                     {LogoComp ? <LogoComp /> : null}

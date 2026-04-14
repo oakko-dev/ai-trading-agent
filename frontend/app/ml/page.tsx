@@ -166,7 +166,7 @@ export default function MLPage() {
 
   if (loading) {
     return (
-      <div className="p-4 lg:p-6 space-y-6">
+      <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-40 rounded-xl" />
         <Skeleton className="h-60 rounded-xl" />
@@ -182,7 +182,7 @@ export default function MLPage() {
   const totalBars = dataStatus.reduce((sum, d) => sum + (d.bar_count as number), 0);
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
+    <div className="p-4 sm:p-6 xl:p-8 space-y-5 sm:space-y-6">
       <PageHeader title="ML Model" subtitle="Train and manage LightGBM signal model per symbol" />
 
       <PageInstructions
@@ -304,7 +304,7 @@ export default function MLPage() {
           </button>
 
           {showAdvanced && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <label className="text-[11px] text-muted-foreground font-medium">Forward Bars</label>
                 <Input type="number" value={forwardBars} onChange={(e) => setForwardBars(parseInt(e.target.value) || 10)} className="text-sm" />
