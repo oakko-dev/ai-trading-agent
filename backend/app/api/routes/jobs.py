@@ -1,5 +1,6 @@
 """Job Management API — create, list, cancel, retry jobs."""
 
+from app.auth import require_auth
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,7 +61,7 @@ def _get_job_queue(request: Request):
 # ─── Endpoints ────────────────────────────────────────────────────────────────
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_auth)])
 async def create_job(
     req: JobCreateRequest,
     request: Request,
@@ -81,7 +82,7 @@ async def create_job(
     return _job_to_response(job)
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_auth)])
 async def list_jobs(
     request: Request,
     status: str | None = None,
@@ -110,7 +111,7 @@ async def list_jobs(
     return [_job_to_response(j) for j in jobs]
 
 
-@router.get("/{job_id}")
+@router.get("/{job_id}", dependencies=[Depends(require_auth)])
 async def get_job(job_id: int, request: Request):
     """Get job detail including agent output.
 
@@ -153,7 +154,7 @@ async def get_job(job_id: int, request: Request):
     return _job_to_response(job)
 
 
-@router.post("/{job_id}/cancel")
+@router.post("/{job_id}/cancel", dependencies=[Depends(require_auth)])
 async def cancel_job(
     job_id: int,
     request: Request,
@@ -173,7 +174,7 @@ async def cancel_job(
     return _job_to_response(job)
 
 
-@router.post("/{job_id}/retry")
+@router.post("/{job_id}/retry", dependencies=[Depends(require_auth)])
 async def retry_job(
     job_id: int,
     request: Request,

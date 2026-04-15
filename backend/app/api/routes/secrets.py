@@ -3,6 +3,7 @@
 from datetime import datetime
 
 import httpx
+from app.auth import require_auth
 from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from pydantic import BaseModel
@@ -45,7 +46,7 @@ class SecretDetailResponse(SecretResponse):
 # ─── Vault Status ────────────────────────────────────────────────────────────
 
 
-@router.get("/vault-status")
+@router.get("/vault-status", dependencies=[Depends(require_auth)])
 async def get_vault_status():
     """Check if the vault is available (master key configured)."""
     return {"available": vault.is_available}
@@ -54,7 +55,7 @@ async def get_vault_status():
 # ─── List Secrets ────────────────────────────────────────────────────────────
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_auth)])
 async def list_secrets(db: AsyncSession = Depends(get_db)):
     """List all non-deleted secrets (no decryption needed)."""
     result = await db.execute(
@@ -81,7 +82,7 @@ async def list_secrets(db: AsyncSession = Depends(get_db)):
 # ─── Get Secret (masked) ────────────────────────────────────────────────────
 
 
-@router.get("/{key}")
+@router.get("/{key}", dependencies=[Depends(require_auth)])
 async def get_secret(
     key: str,
     request: Request,
@@ -119,7 +120,7 @@ async def get_secret(
 # ─── Upsert Secret ──────────────────────────────────────────────────────────
 
 
-@router.put("/{key}")
+@router.put("/{key}", dependencies=[Depends(require_auth)])
 async def upsert_secret(
     key: str,
     req: SecretUpsertRequest,
@@ -171,7 +172,7 @@ async def upsert_secret(
 # ─── Delete Secret (soft) ───────────────────────────────────────────────────
 
 
-@router.delete("/{key}")
+@router.delete("/{key}", dependencies=[Depends(require_auth)])
 async def delete_secret(
     key: str,
     request: Request,
@@ -196,7 +197,7 @@ async def delete_secret(
 # ─── Test Secret Connectivity ───────────────────────────────────────────────
 
 
-@router.post("/{key}/test")
+@router.post("/{key}/test", dependencies=[Depends(require_auth)])
 async def test_secret(
     key: str,
     request: Request,
@@ -237,7 +238,7 @@ async def test_secret(
 # ─── Secret History ──────────────────────────────────────────────────────────
 
 
-@router.get("/{key}/history")
+@router.get("/{key}/history", dependencies=[Depends(require_auth)])
 async def get_secret_history(
     key: str,
     db: AsyncSession = Depends(get_db),

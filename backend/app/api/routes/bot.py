@@ -9,6 +9,8 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from loguru import logger
+
 from app.auth import require_auth
 from app.config import settings
 from sqlalchemy import desc, select
@@ -69,8 +71,8 @@ class SettingsUpdate(BaseModel):
     max_risk_per_trade: float | None = Field(None, ge=0.001, le=0.10)
     max_daily_loss: float | None = Field(None, ge=0.01, le=0.20)
     max_concurrent_trades: int | None = Field(None, ge=1, le=20)
-    max_lot: float | None = Field(None, ge=0.01, le=100.0)
-    fixed_lot: float | None = Field(None, ge=0.01, le=100.0)
+    max_lot: float | None = Field(None, ge=0.01, le=1.0)
+    fixed_lot: float | None = Field(None, ge=0.01, le=1.0)
     lot_mode: Literal["fixed", "auto"] | None = None
 
 
@@ -182,10 +184,18 @@ async def get_account():
 async def update_strategy(data: StrategyUpdate):
     engine = _get_engine(data.symbol)
     if data.name == "ai_autonomous":
+        try:
+            await engine.redis.set("trading_mode", "ai_autonomous")
+        except Exception as e:
+            logger.debug(f"Redis trading_mode write failed: {e}")
         settings.trading_mode = "ai_autonomous"
         engine.strategy = None
         return {"status": "updated", "strategy": "ai_autonomous", "symbol": engine.symbol}
     # Switch back to strategy-first mode
+    try:
+        await engine.redis.set("trading_mode", "strategy")
+    except Exception as e:
+        logger.debug(f"Redis trading_mode write failed: {e}")
     settings.trading_mode = "strategy"
     try:
         await engine.update_strategy(data.name, data.params)

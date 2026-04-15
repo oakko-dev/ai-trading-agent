@@ -2,6 +2,7 @@
 
 import os
 
+from app.auth import require_auth
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +50,7 @@ async def _resolve_mode(request: Request) -> str:
 # ─── Rollout Mode ────────────────────────────────────────────────────────────
 
 
-@router.get("/mode")
+@router.get("/mode", dependencies=[Depends(require_auth)])
 async def get_rollout_mode(request: Request):
     """Get current rollout mode."""
     mode = await _resolve_mode(request)
@@ -62,7 +63,7 @@ async def get_rollout_mode(request: Request):
     }
 
 
-@router.put("/mode")
+@router.put("/mode", dependencies=[Depends(require_auth)])
 async def set_rollout_mode(
     req: RolloutModeRequest,
     request: Request,
@@ -76,6 +77,20 @@ async def set_rollout_mode(
         )
 
     old_mode = os.environ.get("ROLLOUT_MODE", settings.rollout_mode)
+
+    # Enforce sequential transitions (forward) + allow emergency rollback to any lower mode
+    valid_transitions = {
+        "shadow": {"paper"},
+        "paper": {"shadow", "micro"},
+        "micro": {"shadow", "paper", "live"},
+        "live": {"shadow", "micro"},
+    }
+    if old_mode != req.mode and req.mode not in valid_transitions.get(old_mode, set()):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot jump from '{old_mode}' to '{req.mode}'. Must transition sequentially.",
+        )
+
     os.environ["ROLLOUT_MODE"] = req.mode
 
     # Sync to Redis so both sources agree
@@ -103,7 +118,7 @@ async def set_rollout_mode(
 # ─── Deploy Readiness Check ─────────────────────────────────────────────────
 
 
-@router.get("/readiness")
+@router.get("/readiness", dependencies=[Depends(require_auth)])
 async def check_readiness(request: Request):
     """Check deploy readiness — verifies all required components are configured."""
     checks: list[dict] = []

@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from app.auth import require_auth
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,7 +73,7 @@ def _get_manager(request: Request):
 # ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_auth)])
 async def register_runner(
     req: RunnerCreateRequest,
     request: Request,
@@ -95,7 +96,7 @@ async def register_runner(
     return _runner_to_response(runner)
 
 
-@router.get("")
+@router.get("", dependencies=[Depends(require_auth)])
 async def list_runners(request: Request):
     """List all runners with status."""
     manager = _get_manager(request)
@@ -103,7 +104,7 @@ async def list_runners(request: Request):
     return [_runner_to_response(r) for r in runners]
 
 
-@router.get("/{runner_id}")
+@router.get("/{runner_id}", dependencies=[Depends(require_auth)])
 async def get_runner(runner_id: int, request: Request):
     """Get runner detail."""
     manager = _get_manager(request)
@@ -125,7 +126,7 @@ async def get_runner(runner_id: int, request: Request):
     return {**response.model_dump(), "current_jobs": current_jobs}
 
 
-@router.put("/{runner_id}")
+@router.put("/{runner_id}", dependencies=[Depends(require_auth)])
 async def update_runner(
     runner_id: int,
     req: RunnerUpdateRequest,
@@ -152,7 +153,7 @@ async def update_runner(
     return _runner_to_response(runner)
 
 
-@router.delete("/{runner_id}")
+@router.delete("/{runner_id}", dependencies=[Depends(require_auth)])
 async def delete_runner(
     runner_id: int,
     request: Request,
@@ -179,7 +180,7 @@ async def delete_runner(
 # ─── Lifecycle Control ───────────────────────────────────────────────────────
 
 
-@router.post("/{runner_id}/start")
+@router.post("/{runner_id}/start", dependencies=[Depends(require_auth)])
 async def start_runner(
     runner_id: int,
     request: Request,
@@ -201,7 +202,7 @@ async def start_runner(
     return _runner_to_response(runner)
 
 
-@router.post("/{runner_id}/stop")
+@router.post("/{runner_id}/stop", dependencies=[Depends(require_auth)])
 async def stop_runner(
     runner_id: int,
     request: Request,
@@ -221,7 +222,7 @@ async def stop_runner(
     return _runner_to_response(runner)
 
 
-@router.post("/{runner_id}/restart")
+@router.post("/{runner_id}/restart", dependencies=[Depends(require_auth)])
 async def restart_runner(
     runner_id: int,
     request: Request,
@@ -241,7 +242,7 @@ async def restart_runner(
     return _runner_to_response(runner)
 
 
-@router.post("/{runner_id}/kill")
+@router.post("/{runner_id}/kill", dependencies=[Depends(require_auth)])
 async def kill_runner(
     runner_id: int,
     request: Request,
@@ -264,7 +265,7 @@ async def kill_runner(
 # ─── Observability ───────────────────────────────────────────────────────────
 
 
-@router.get("/{runner_id}/logs")
+@router.get("/{runner_id}/logs", dependencies=[Depends(require_auth)])
 async def get_runner_logs(
     runner_id: int,
     request: Request,
@@ -299,7 +300,7 @@ async def get_runner_logs(
     ]
 
 
-@router.get("/{runner_id}/metrics")
+@router.get("/{runner_id}/metrics", dependencies=[Depends(require_auth)])
 async def get_runner_metrics(
     runner_id: int,
     request: Request,
@@ -334,7 +335,7 @@ async def get_runner_metrics(
     ]
 
 
-@router.get("/{runner_id}/jobs")
+@router.get("/{runner_id}/jobs", dependencies=[Depends(require_auth)])
 async def get_runner_jobs(
     runner_id: int,
     request: Request,
