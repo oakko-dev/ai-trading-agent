@@ -1,10 +1,10 @@
 #!/bin/bash
 # Run AI Agent Runner locally on Mac
-# Connects to Railway Redis + MT5 Bridge; uses Kimi (Moonshot) API (MOONSHOT_API_KEY)
+# Connects to remote Redis + Postgres (e.g. Oracle VPS Docker, Railway, or other) + MT5 Bridge; uses Kimi (MOONSHOT_API_KEY)
 #
 # Prerequisites:
-#   1. Enable public networking for Redis + Postgres in Railway dashboard
-#   2. Update backend/.env.local with public URLs and MOONSHOT_API_KEY
+#   1. Expose Redis + Postgres to this machine (public host/port or VPN) if not local
+#   2. Update backend/.env.local with URLs and MOONSHOT_API_KEY
 #
 # Usage: ./scripts/run_agent.sh
 
@@ -27,7 +27,7 @@ fi
 # Check for REPLACE placeholders
 if grep -q "REPLACE_WITH" "$BACKEND_DIR/.env.local"; then
     echo "ERROR: backend/.env.local still has REPLACE_WITH placeholders."
-    echo "Enable public networking in Railway dashboard and update the URLs."
+    echo "Update Redis/Postgres URLs in backend/.env.local to reachable hosts."
     exit 1
 fi
 

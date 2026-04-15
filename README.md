@@ -6,11 +6,11 @@ Trades GOLD (XAUUSD), OILCash, BTCUSD, USDJPY via MetaTrader 5.
 ## Architecture
 
 ```
-Frontend (Next.js 16, Vercel)
+Frontend (Next.js 16, Docker on VPS or static host)
     |
     | HTTPS + WebSocket
     v
-Backend (FastAPI, Railway)
+Backend (FastAPI, Docker on Oracle Cloud VPS / any host)
     |-- Auth Layer (Passkey WebAuthn + JWT)
     |-- Secrets Vault (AES-256-GCM encrypted)
     |-- Runner Manager (process/Docker sandbox)
@@ -42,7 +42,7 @@ Backend (FastAPI, Railway)
 | ML | LightGBM, scikit-learn, pandas |
 | Auth | WebAuthn (Passkey) + JWT httpOnly cookie |
 | Trading | MetaTrader 5 via HTTP Bridge |
-| CI/CD | GitHub Actions (ruff, pytest, tsc, build), Railway auto-deploy |
+| CI/CD | GitHub Actions (ruff, pytest, tsc, build); production via `docker-compose.prod.yml` on VPS |
 | DB | PostgreSQL 15, Redis 7 |
 
 ## Features
@@ -105,6 +105,22 @@ npm run dev
 cd backend
 python -m pytest tests/ -v --no-cov  # 413 tests
 ```
+
+## Production (Oracle Cloud VPS / Docker)
+
+Run the API, UI, PostgreSQL, and Redis on one host with Docker Compose:
+
+```bash
+cp deploy/env.example deploy/.env
+# Edit deploy/.env: set POSTGRES_PASSWORD, DATABASE_URL_*, REDIS_URL, NEXT_PUBLIC_*,
+# CORS_ORIGINS (your UI URL), MT5_BRIDGE_URL, MOONSHOT_API_KEY, SECRET_KEY, etc.
+
+docker compose -f docker-compose.prod.yml --env-file deploy/.env up -d --build
+```
+
+- Backend listens on `BACKEND_HOST_PORT` (default `8080`); frontend on `FRONTEND_HOST_PORT` (default `3000`).
+- `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL` are baked in at **build** time — rebuild the frontend image after changing them.
+- Optional TLS: use `deploy/nginx.conf.example` on the host with certbot, or your cloud load balancer.
 
 ## Environment Variables
 

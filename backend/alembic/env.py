@@ -10,8 +10,20 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Use DATABASE_URL_SYNC env var if available (Railway, production)
-db_url = os.getenv("DATABASE_URL_SYNC")
+def _sync_database_url() -> str | None:
+    """Alembic needs a sync driver URL; prefer DATABASE_URL_SYNC, else derive from DATABASE_URL."""
+    sync = os.getenv("DATABASE_URL_SYNC")
+    if sync:
+        return sync
+    async_url = os.getenv("DATABASE_URL")
+    if not async_url:
+        return None
+    if async_url.startswith("postgresql+asyncpg://"):
+        return "postgresql://" + async_url.removeprefix("postgresql+asyncpg://")
+    return async_url
+
+
+db_url = _sync_database_url()
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
 
@@ -41,6 +53,9 @@ def run_migrations_online() -> None:
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
+        # SQLAlchemy 2.0: connection context rolls back on exit unless committed; without this,
+        # migrations appear to run but DDL is discarded (empty database).
+        connection.commit()
 
 
 if context.is_offline_mode():

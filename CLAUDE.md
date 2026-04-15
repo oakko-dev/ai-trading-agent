@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Multi-symbol automated trading bot: FastAPI backend (Railway) + Next.js frontend (Vercel) + MT5 Bridge (Windows VPS). Trades GOLD, OILCash, BTCUSD, USDJPY.
+Multi-symbol automated trading bot: FastAPI backend + Next.js frontend (Docker on Oracle VPS via `docker-compose.prod.yml`, or other hosts) + MT5 Bridge (Windows VPS). Trades GOLD, OILCash, BTCUSD, USDJPY.
 
 **Current state**: Phase 6-10 complete (testing, resilience, trading features, ML, polish). AI Agent architecture (Phases 0-F) complete per ROADMAP-AI-AGENT.md. Now in production hardening and feature polish.
 
@@ -98,7 +98,7 @@ Frontend (Next.js 16) → Backend (FastAPI) → MT5 Bridge (Windows VPS)
 | ML | LightGBM, scikit-learn, pandas |
 | AI | Kimi (Moonshot OpenAI-compatible API, `MOONSHOT_API_KEY`) |
 | Auth | JWT Bearer token (username/password) — WebAuthn code exists but disabled |
-| CI/CD | GitHub Actions (ruff, pytest, tsc, build), Railway auto-deploy |
+| CI/CD | GitHub Actions (ruff, pytest, tsc, build); production stack `docker-compose.prod.yml` + `deploy/env.example` |
 | DB | PostgreSQL 15, Redis 7 (AOF persistence), 14 Alembic migrations |
 | Notifications | Telegram bot alerts |
 
@@ -163,10 +163,14 @@ npx tsc --noEmit          # type check
 npm run build             # production build
 npm run dev               # dev server
 
-# Railway
-railway vars list -s backend --kv    # list env vars
-railway logs                          # view logs
-railway vars set -s backend "KEY=value"  # set env var
+# Production (Oracle VPS / Docker)
+# cp deploy/env.example deploy/.env
+# docker compose -f docker-compose.prod.yml --env-file deploy/.env up -d --build
+
+# Legacy Railway (optional)
+railway vars list -s backend --kv
+railway logs
+railway vars set -s backend "KEY=value"
 ```
 
 ## Important Patterns

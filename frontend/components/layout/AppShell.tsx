@@ -27,14 +27,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Verify token is still valid
-    api.get("/api/auth/me")
+    // Verify token is still valid (required when backend auth is enabled)
+    api
+      .get("/api/auth/me")
       .then(() => {
         setAuthChecked(true);
       })
-      .catch(() => {
-        // Token invalid or auth not configured — allow if no password set
-        api.get("/health")
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          router.replace("/login");
+          return;
+        }
+        // Network / server error — still allow UI if health responds
+        api
+          .get("/health")
           .then(() => setAuthChecked(true))
           .catch(() => setAuthChecked(true));
       });

@@ -1,7 +1,24 @@
 import axios from "axios";
 
+/**
+ * Browser: same-origin (empty base) so requests go to the Next.js host:port; next.config rewrites
+ * proxy to FastAPI. Avoids baking `localhost` into the bundle (breaks access via LAN IP / domain).
+ * Server (if ever used): direct URL to the API inside Docker.
+ */
+function resolveApiBaseURL(): string {
+  if (typeof window !== "undefined") {
+    return "";
+  }
+  return (
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://127.0.0.1:8080"
+  );
+}
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+  baseURL: resolveApiBaseURL(),
   timeout: 10000,
 });
 

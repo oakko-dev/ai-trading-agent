@@ -22,6 +22,7 @@ export default function LoginPage() {
 
       // Store token in localStorage
       localStorage.setItem("token", access_token);
+      window.dispatchEvent(new Event("goldbot:token-changed"));
 
       // Redirect to dashboard
       router.push("/dashboard");

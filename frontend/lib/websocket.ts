@@ -2,6 +2,58 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 
+/**
+ * WebSocket URL reachable from the browser.
+ * - Production (Docker + nginx gateway): same host:port as the page — nginx proxies /ws to FastAPI.
+ *   Do NOT use :8080 from the browser when the UI is on :3000; cloud firewalls often block 8080 → "pending".
+ * - Local dev: ws://localhost:8080/ws (API on 8080).
+ * - NEXT_PUBLIC_WS_URL: use for a different host only (e.g. wss://api.example.com/ws). Same host + :8080 is ignored when the page is on another port.
+ */
+function resolveWsBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return process.env.NEXT_PUBLIC_WS_URL || "ws://127.0.0.1:8080/ws";
+  }
+
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+
+  if (isLocal) {
+    const port = process.env.NEXT_PUBLIC_BACKEND_PORT || "8080";
+    return `${proto}//${host}:${port}/ws`;
+  }
+
+  const explicit = process.env.NEXT_PUBLIC_WS_URL;
+  if (explicit && !explicit.includes("localhost") && !explicit.includes("127.0.0.1")) {
+    try {
+      const u = new URL(explicit);
+      const pagePort =
+        window.location.port ||
+        (window.location.protocol === "https:" ? "443" : "80");
+      const explicitPort =
+        u.port || (u.protocol === "wss:" || u.protocol === "https:" ? "443" : "80");
+
+      if (u.hostname === window.location.hostname) {
+        // Same host: never use baked :8080 when the page is on another port (e.g. nginx on :3000).
+        if (explicitPort === "8080" && pagePort !== "8080") {
+          return `${proto}//${window.location.host}/ws`;
+        }
+        if (u.host === window.location.host) {
+          return explicit;
+        }
+        // Same hostname, different ports (e.g. env had IP:8080, page is IP:3000)
+        return `${proto}//${window.location.host}/ws`;
+      }
+      // Different hostname only — split API / CDN (e.g. wss://api.example.com/ws)
+      return explicit;
+    } catch {
+      // invalid URL — fall through
+    }
+  }
+
+  return `${proto}//${window.location.host}/ws`;
+}
+
 type WSMessage = {
   channel: string;
   data: unknown;
@@ -22,6 +74,7 @@ export function useWebSocket(): UseWebSocketReturn {
     new Map()
   );
   const reconnectAttemptsRef = useRef(0);
+  const skipBackoffReconnectRef = useRef(false);
 
   const connect = useCallback(() => {
     // Don't create duplicate connections
@@ -29,10 +82,11 @@ export function useWebSocket(): UseWebSocketReturn {
       return;
     }
 
-    const baseWsUrl =
-      process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
+    const baseWsUrl = resolveWsBaseUrl();
     const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
-    const wsUrl = token ? `${baseWsUrl}?token=${token}` : baseWsUrl;
+    const wsUrl = token
+      ? `${baseWsUrl}?token=${encodeURIComponent(token)}`
+      : baseWsUrl;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -59,6 +113,10 @@ export function useWebSocket(): UseWebSocketReturn {
 
       ws.onclose = () => {
         setIsConnected(false);
+        if (skipBackoffReconnectRef.current) {
+          skipBackoffReconnectRef.current = false;
+          return;
+        }
         // Always retry with backoff (cap at 30s)
         const delay = Math.min(
           1000 * 2 ** reconnectAttemptsRef.current,
@@ -75,6 +133,18 @@ export function useWebSocket(): UseWebSocketReturn {
       // connection failed
     }
   }, []);
+
+  useEffect(() => {
+    const onTokenChanged = () => {
+      reconnectAttemptsRef.current = 0;
+      skipBackoffReconnectRef.current = true;
+      wsRef.current?.close();
+      wsRef.current = null;
+      setTimeout(() => connect(), 0);
+    };
+    window.addEventListener("goldbot:token-changed", onTokenChanged);
+    return () => window.removeEventListener("goldbot:token-changed", onTokenChanged);
+  }, [connect]);
 
   useEffect(() => {
     connect();
