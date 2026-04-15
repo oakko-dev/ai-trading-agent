@@ -3,10 +3,11 @@ Macro data API routes — FRED economic indicators and correlations.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_auth
-
 from app.config import settings
+from app.db.session import get_db
 
 router = APIRouter(prefix="/api/macro", tags=["macro"])
 
@@ -21,17 +22,23 @@ def set_macro_deps(macro_service, event_calendar):
 
 
 @router.get("/latest")
-async def get_latest_macro():
+async def get_latest_macro(db: AsyncSession = Depends(get_db)):
     if _macro_service is None:
         raise HTTPException(status_code=503, detail="Macro service not initialized")
-    return await _macro_service.get_latest_snapshot()
+    from app.data.macro import MacroDataService
+    svc = MacroDataService(db)
+    return await svc.get_latest_snapshot()
 
 
 @router.get("/correlations")
-async def get_correlations(days: int = 90):
+async def get_correlations(days: int = 90, db: AsyncSession = Depends(get_db)):
     if _macro_service is None:
         raise HTTPException(status_code=503, detail="Macro service not initialized")
-    return await _macro_service.compute_correlations(settings.symbol, settings.timeframe, days)
+    from app.config import resolve_broker_symbol
+    from app.data.macro import MacroDataService
+    svc = MacroDataService(db)
+    symbol = resolve_broker_symbol(settings.symbol)
+    return await svc.compute_correlations(symbol, settings.timeframe, days)
 
 
 @router.get("/events")
